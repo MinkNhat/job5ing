@@ -1,3 +1,95 @@
-* {
-    font-family: "Roboto";
+/* ==========================================
+   BIẾN TOÀN CỤC (CSS Variables)
+   ========================================== */
+:root {
+    --bg-body: #f4f7f6;
+    --border-color: #e9ecef;
+    --text-muted: #6c757d;
 }
+
+body {
+    background-color: var(--bg-body);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ==========================================
+   LAYOUT (Header, Footer, Main Content)
+   ========================================== */
+.navbar-custom {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 0;
+}
+.navbar-brand { font-weight: 800; color: #111; letter-spacing: -0.5px; font-size: 1.4rem; }
+.nav-link { font-size: 0.85rem; color: #555; font-weight: 500; transition: color 0.2s; }
+.nav-link:hover { color: #000; }
+.nav-link.active { font-weight: 700; color: #000; }
+
+.main-content {
+    flex: 1;
+    padding-bottom: 50px;
+}
+
+.footer-custom {
+    padding: 20px 0;
+    color: #888;
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border-color);
+    background: #fdfdfd;
+    margin-top: auto;
+}
+
+/* ==========================================
+   THÀNH PHẦN GIAO DIỆN ADMIN (Card, Table, Button)
+   ========================================== */
+.content-card {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 35px;
+    margin-top: 30px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+}
+
+.form-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
+.form-control, .form-select { border: 1px solid var(--border-color); font-size: 0.9rem; }
+
+.table thead th {
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding-bottom: 15px;
+}
+.table tbody td { padding: 20px 10px; font-size: 0.9rem; border-bottom: 1px solid #f8f9fa; }
+
+/* Các nút bấm và Badge chuẩn Job5ing */
+.badge-outline {
+    border: 1px solid #dee2e6;
+    color: #555;
+    background: transparent;
+    font-weight: normal;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.btn-action {
+    background: #f1f3f5;
+    border: 1px solid #dee2e6;
+    color: #444;
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 4px;
+    transition: 0.2s ease;
+}
+.btn-action:hover { background: #e9ecef; }
+.btn-action.text-danger { color: #dc3545 !important; }
+
+/* Phân trang */
+.pagination .page-link { color: #333; border: 1px solid var(--border-color); margin: 0 2px; border-radius: 4px;}
+.pagination .active .page-link { background-color: #2c3e50; border-color: #2c3e50; color: white; }

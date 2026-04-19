@@ -1,29 +1,30 @@
-<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">TÌM VIỆC ONLINE</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container">
+        <a class="navbar-brand" href="#">Job5ing</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="collapsibleNavbar">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="/">Trang chủ</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="/">Công việc hot</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="/">Nhà tuyển dụng nổi bật</a>
-                </li>
-
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-3 ms-4">
+                <li class="nav-item"><a class="nav-link" href="#">Trang chủ</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/admin-custom/accounts">Tài khoản</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Tin tuyển dụng</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Báo cáo</a></li>
             </ul>
-            <form class="d-flex" action="/">
-                <input class="form-control me-2" name="keyword" type="text" placeholder="Nhập từ khóa...">
-                <button class="btn btn-primary" type="submit">Tìm</button>
-            </form>
+
+            <div class="dropdown">
+                <a class="text-muted small text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    Hi Admin
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
+                    <li><a class="dropdown-item small" href="#">Hồ sơ cá nhân</a></li>
+                    <li><a class="dropdown-item small" href="#">Cài đặt hệ thống</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item small text-danger" href="#">Đăng xuất</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </nav>

@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Quản lý tài khoản - Job5ing{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert mt-4 d-flex justify-content-between align-items-center" style="background-color: #d4f4e2; color: #2d573f; border: none;">
+                {{ messages[0] }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" style="font-size: 0.75rem;"></button>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <h4 class="fw-bold m-0">Danh sách tài khoản</h4>
+            <button class="btn btn-action shadow-sm">+ Thêm</button>
+        </div>
+
+        <form method="get" class="row g-3 mb-5">
+            <div class="col-md-5">
+                <label class="form-label">Tìm kiếm</label>
+                <input type="text" name="keyword" class="form-control" placeholder="Nhập tên đăng nhập..." value="{{ request.args.get('keyword','') }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Vai trò</label>
+                <select name="role" class="form-select">
+                    <option value="all">Tất cả</option>
+                    <option value="ADMIN">Quản trị</option>
+                    <option value="EMPLOYER">Nhà tuyển dụng</option>
+                    <option value="USER">Ứng viên</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Trạng thái</label>
+                <select name="status" class="form-select">
+                    <option value="all">Tất cả</option>
+                    <option value="ACTIVE">Hoạt động</option>
+                    <option value="INACTIVE">Bị khóa</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button class="btn btn-dark w-100 py-2" style="font-size: 0.9rem;">Lọc</button>
+            </div>
+        </form>
+
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th width="80">ID</th>
+                    <th>Tên đăng nhập</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th width="200">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in users.items %}
+                <tr>
+                    <td class="text-muted">{{ "%03d" | format(u.id) }}</td>
+                    <td>{{ u.email.split('@')[0] if u.email else 'N/A' }}</td>
+
+                    <td>
+                        {% if u.is_admin %}
+                            <span class="badge badge-outline">Quản trị</span>
+                        {% elif u.is_employer %}
+                            <span class="badge badge-outline">Nhà tuyển d.</span>
+                        {% else %}
+                            <span class="badge badge-outline">Ứng viên</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <span class="badge badge-outline" style="{% if not u.is_active %}font-style: italic; color: #888;{% endif %}">
+                            {{ 'Hoạt động' if u.is_active else 'Chờ duyệt/Bị khóa' }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-action">Sửa</button>
+
+                            <form method="post" action="/admin/users/{{u.id}}/toggle" style="margin:0;">
+                                <button class="btn btn-action">
+                                    {% if u.is_active %}Khóa{% else %}Mở{% endif %}
+                                </button>
+                            </form>
+
+                            <form method="post" action="/admin/users/{{u.id}}/delete" style="margin:0;">
+                                <button class="btn btn-action text-danger" onclick="return confirm('Xóa user?')">Xóa</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <nav class="mt-5">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if not users.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ users.prev_num }}">Trang trước</a>
+                </li>
+                {% for p in users.iter_pages() %}
+                    {% if p %}
+                        <li class="page-item {% if p == users.page %}active{% endif %}">
+                            <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not users.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ users.next_num }}">Trang sau</a>
+                </li>
+            </ul>
+        </nav>
+
+    </div>
+</div>
+{% endblock %}
