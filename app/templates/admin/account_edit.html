@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="fw-bold m-0">Chỉnh sửa tài khoản</h5>
+                <small class="text-muted">Cập nhật thông tin và quyền cho tài khoản #{{ user.id }}</small>
+            </div>
+            <a href="{{ next_url or url_for('admin_panel.accounts') }}" class="btn btn-outline-secondary">Quay lại</a>
+        </div>
+
+        <form method="post" class="row g-3">
+            <input type="hidden" name="next" value="{{ next_url or '' }}">
+            <div class="col-md-6">
+                <label for="email" class="form-label">Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-control"
+                    value="{{ request.form.get('email', user.email) }}"
+                    required
+                >
+            </div>
+
+            <div class="col-md-3">
+                <label for="first_name" class="form-label">Tên</label>
+                <input
+                    type="text"
+                    id="first_name"
+                    name="first_name"
+                    class="form-control"
+                    value="{{ request.form.get('first_name', user.first_name or '') }}"
+                >
+            </div>
+
+            <div class="col-md-3">
+                <label for="last_name" class="form-label">Họ</label>
+                <input
+                    type="text"
+                    id="last_name"
+                    name="last_name"
+                    class="form-control"
+                    value="{{ request.form.get('last_name', user.last_name or '') }}"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label for="phone" class="form-label">Số điện thoại</label>
+                <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    class="form-control"
+                    value="{{ request.form.get('phone', user.phone or '') }}"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label for="sex" class="form-label">Giới tính</label>
+                {% set selected_sex = request.form.get('sex', user.sex or '') %}
+                <select id="sex" name="sex" class="form-select">
+                    <option value="">Chưa chọn</option>
+                    <option value="Nam" {% if selected_sex == 'Nam' %}selected{% endif %}>Nam</option>
+                    <option value="Nữ" {% if selected_sex == 'Nữ' %}selected{% endif %}>Nữ</option>
+                    <option value="Khác" {% if selected_sex == 'Khác' %}selected{% endif %}>Khác</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label for="role" class="form-label">Vai trò</label>
+                {% set selected_role = request.form.get('role', 'admin' if user.is_admin else 'employer' if user.is_employer else 'user') %}
+                <select id="role" name="role" class="form-select">
+                    <option value="user" {% if selected_role == 'user' %}selected{% endif %}>Ứng viên</option>
+                    <option value="employer" {% if selected_role == 'employer' %}selected{% endif %}>Nhà tuyển dụng</option>
+                    <option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>Quản trị</option>
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label for="address" class="form-label">Địa chỉ</label>
+                <textarea
+                    id="address"
+                    name="address"
+                    class="form-control"
+                    rows="3"
+                >{{ request.form.get('address', user.address or '') }}</textarea>
+            </div>
+
+            <div class="col-12">
+                {% set active_value = request.form.get('is_active', '1' if user.is_active else '0') %}
+                <label for="is_active" class="form-label">Trạng thái</label>
+                <select id="is_active" name="is_active" class="form-select">
+                    <option value="1" {% if active_value == '1' %}selected{% endif %}>Hoạt động</option>
+                    <option value="0" {% if active_value == '0' %}selected{% endif %}>Đã khóa</option>
+                </select>
+            </div>
+
+            <div class="col-12 d-flex gap-2 justify-content-end mt-3">
+                <a href="{{ next_url or url_for('admin_panel.accounts') }}" class="btn btn-outline-secondary">Hủy</a>
+                <button type="submit" class="btn btn-filter">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
