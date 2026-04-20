@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="content-card">
+        <!-- TITLE -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold m-0">Danh sách tài khoản</h5>
+        </div>
+
+        <!-- FILTER -->
+        <form class="row g-3 mb-4" method="get" action="{{ url_for('admin_panel.accounts') }}">
+            <div class="col-md-5">
+                <input
+                    type="text"
+                    class="form-control"
+                    name="keyword"
+                    value="{{ request.args.get('keyword', '') }}"
+                    placeholder="Nhập email..."
+                >
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select" name="role">
+                    <option value="all" {% if request.args.get('role', 'all') == 'all' %}selected{% endif %}>Tất cả vai trò</option>
+                    <option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Quản trị</option>
+                    <option value="employer" {% if request.args.get('role') == 'employer' %}selected{% endif %}>Nhà tuyển dụng</option>
+                    <option value="user" {% if request.args.get('role') == 'user' %}selected{% endif %}>Ứng viên</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select" name="status">
+                    <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
+                    <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Hoạt động</option>
+                    <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Đã khóa</option>
+                </select>
+            </div>
+
+            <div class="col-md-1 d-flex gap-2">
+                <button type="submit" class="btn btn-filter w-100">Lọc</button>
+            </div>
+        </form>
+
+        <!-- TABLE -->
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th width="60">ID</th>
+                    <th>Email</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th width="200">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for u in users.items %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td>{{ u.email }}</td>
+
+                    <!-- ROLE -->
+                    <td>
+                        {% if u.is_admin %}
+                            <span class="badge-role-blue">Quản trị</span>
+                        {% elif u.is_employer %}
+                            <span class="badge-role-blue">Nhà tuyển dụng</span>
+                        {% else %}
+                            <span class="badge-role-gray">Ứng viên</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- STATUS -->
+                    <td>
+                        {% if u.is_active %}
+                            <span class="badge-status-active">Hoạt động</span>
+                        {% else %}
+                            <span class="badge-status-inactive">Đã khóa</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ACTION -->
+                    <td>
+                        <div class="d-flex gap-2">
+                            <a
+                                href="{{ url_for('admin_panel.edit_account', user_id=u.id, next=request.url) }}"
+                                class="btn btn-action btn-edit"
+                            >
+                                Sửa
+                            </a>
+
+                            <form
+                                method="post"
+                                action="{{ url_for('admin_panel.toggle_account', user_id=u.id, page=users.page, keyword=request.args.get('keyword'), role=request.args.get('role', 'all'), status=request.args.get('status', 'all')) }}"
+                                style="margin:0;"
+                            >
+                                <button class="btn btn-action btn-warning">
+                                    {{ 'Mở khóa' if not u.is_active else 'Khóa' }}
+                                </button>
+                            </form>
+
+                            <form
+                                method="post"
+                                action="{{ url_for('admin_panel.delete_account', user_id=u.id, page=users.page, keyword=request.args.get('keyword'), role=request.args.get('role', 'all'), status=request.args.get('status', 'all')) }}"
+                                style="margin:0;"
+                            >
+                                <button class="btn btn-action btn-danger"
+                                        onclick="return confirm('Xóa tài khoản này? Hành động này có thể xóa luôn dữ liệu liên quan.')">
+                                    Xóa
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        Không tìm thấy tài khoản phù hợp.
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- PAGINATION -->
+        {% if users.pages > 1 %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if not users.has_prev %}disabled{% endif %}">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('admin_panel.accounts', page=users.prev_num, keyword=request.args.get('keyword'), role=request.args.get('role', 'all'), status=request.args.get('status', 'all')) if users.has_prev else '#' }}"
+                    >
+                        Trước
+                    </a>
+                </li>
+                {% for page_num in users.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == users.page %}active{% endif %}">
+                            <a
+                                class="page-link"
+                                href="{{ url_for('admin_panel.accounts', page=page_num, keyword=request.args.get('keyword'), role=request.args.get('role', 'all'), status=request.args.get('status', 'all')) }}"
+                            >
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not users.has_next %}disabled{% endif %}">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('admin_panel.accounts', page=users.next_num, keyword=request.args.get('keyword'), role=request.args.get('role', 'all'), status=request.args.get('status', 'all')) if users.has_next else '#' }}"
+                    >
+                        Sau
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
