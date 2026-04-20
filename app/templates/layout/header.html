@@ -1,29 +1,33 @@
-<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">TÌM VIỆC ONLINE</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container">
+        <a class="navbar-brand navbar-brand-custom" href="{{ url_for('admin_panel.accounts') }}">
+            <span class="brand-mark">J</span>
+            <span class="brand-text">Job5ing Admin</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="collapsibleNavbar">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="/">Trang chủ</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="/">Công việc hot</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="/">Nhà tuyển dụng nổi bật</a>
-                </li>
-
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 navbar-links">
+                <li class="nav-item"><a class="nav-link" href="#">Trang chủ</a></li>
+                <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_panel.accounts') }}">Tài khoản</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Tin tuyển dụng</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Báo cáo</a></li>
             </ul>
-            <form class="d-flex" action="/">
-                <input class="form-control me-2" name="keyword" type="text" placeholder="Nhập từ khóa...">
-                <button class="btn btn-primary" type="submit">Tìm</button>
-            </form>
+
+            <div class="dropdown navbar-user-menu">
+                <a class="nav-user-trigger text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    {{ ((current_admin.last_name or '') ~ ' ' ~ (current_admin.first_name or '')).strip() if current_admin else 'Hi Admin' }}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
+                    <li><a class="dropdown-item small" href="{{ url_for('admin_panel.profile') }}">Hồ sơ cá nhân</a></li>
+                    <li><a class="dropdown-item small" href="{{ url_for('admin_panel.accounts', role='admin') }}">Tài khoản quản trị viên</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item small text-danger" href="#">Đăng xuất</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </nav>

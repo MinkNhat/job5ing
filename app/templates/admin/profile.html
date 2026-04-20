@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="fw-bold m-0">Hồ sơ cá nhân</h5>
+                <small class="text-muted">Xem và cập nhật hồ sơ của tài khoản quản trị viên hiện tại</small>
+            </div>
+            <a href="{{ url_for('admin_panel.accounts', role='admin') }}" class="btn btn-outline-secondary">Về danh sách tài khoản</a>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="profile-summary-card h-100">
+                    <div class="profile-avatar">
+                        {{ (user.first_name or user.email or 'A')[:1]|upper }}
+                    </div>
+                    <h6 class="fw-bold mb-1">{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or 'Quản trị viên' }}</h6>
+                    <p class="text-muted small mb-3">{{ user.email }}</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <span class="badge-role-blue">Quản trị</span>
+                        {% if user.is_active %}
+                            <span class="badge-status-active">Hoạt động</span>
+                        {% else %}
+                            <span class="badge-status-inactive">Đã khóa</span>
+                        {% endif %}
+                    </div>
+                    <div class="profile-meta mt-4 text-start">
+                        <div class="profile-meta-row">
+                            <span class="profile-meta-label">Mã tài khoản</span>
+                            <strong>#{{ user.id }}</strong>
+                        </div>
+                        <div class="profile-meta-row">
+                            <span class="profile-meta-label">Loại tài khoản</span>
+                            <strong>Quản trị viên</strong>
+                        </div>
+                        <div class="profile-meta-row">
+                            <span class="profile-meta-label">Điện thoại</span>
+                            <strong>{{ user.phone or 'Chưa cập nhật' }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <form method="post" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">Email</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            class="form-control"
+                            value="{{ request.form.get('email', user.email) }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="first_name" class="form-label">Tên</label>
+                        <input
+                            type="text"
+                            id="first_name"
+                            name="first_name"
+                            class="form-control"
+                            value="{{ request.form.get('first_name', user.first_name or '') }}"
+                        >
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="last_name" class="form-label">Họ</label>
+                        <input
+                            type="text"
+                            id="last_name"
+                            name="last_name"
+                            class="form-control"
+                            value="{{ request.form.get('last_name', user.last_name or '') }}"
+                        >
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="phone" class="form-label">Số điện thoại</label>
+                        <input
+                            type="text"
+                            id="phone"
+                            name="phone"
+                            class="form-control"
+                            value="{{ request.form.get('phone', user.phone or '') }}"
+                        >
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="sex" class="form-label">Giới tính</label>
+                        {% set selected_sex = request.form.get('sex', user.sex or '') %}
+                        <select id="sex" name="sex" class="form-select">
+                            <option value="">Chưa chọn</option>
+                            <option value="Nam" {% if selected_sex == 'Nam' %}selected{% endif %}>Nam</option>
+                            <option value="Nữ" {% if selected_sex == 'Nữ' %}selected{% endif %}>Nữ</option>
+                            <option value="Khác" {% if selected_sex == 'Khác' %}selected{% endif %}>Khác</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label for="avatar_url" class="form-label">Ảnh đại diện (URL)</label>
+                        <input
+                            type="text"
+                            id="avatar_url"
+                            name="avatar_url"
+                            class="form-control"
+                            value="{{ request.form.get('avatar_url', user.avatar_url or '') }}"
+                        >
+                    </div>
+
+                    <div class="col-12">
+                        <label for="address" class="form-label">Địa chỉ</label>
+                        <textarea
+                            id="address"
+                            name="address"
+                            class="form-control"
+                            rows="3"
+                        >{{ request.form.get('address', user.address or '') }}</textarea>
+                    </div>
+
+                    <div class="col-12 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-filter">Lưu hồ sơ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
