@@ -6,6 +6,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/public/account.css') }}">
 {% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/account.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <section class="account-section">
     <div class="container">
@@ -38,7 +42,7 @@
                         </div>
                     </div>
 
-                    <form method="post" class="account-form">
+                    <form method="post" class="account-form" enctype="multipart/form-data">
                         <div class="account-grid">
                             <div class="account-field">
                                 <label for="last_name">Họ</label>
@@ -81,8 +85,13 @@
                             </div>
 
                             <div class="account-field account-field-full">
-                                <label for="avatar_url">Link avatar</label>
-                                <input id="avatar_url" name="avatar_url" type="url" value="{{ user.avatar_url or '' }}" placeholder="https://example.com/avatar.jpg">
+                                <label for="avatar">Ảnh đại diện</label>
+                                <div class="avatar-upload-wrapper">
+                                    <input id="avatar" name="avatar" type="file" accept="image/*" class="avatar-input">
+                                    <div class="avatar-upload-hint">
+                                        Chọn ảnh từ máy tính (JPG, JPEG, PNG)
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

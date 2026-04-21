@@ -70,7 +70,7 @@ def account():
         return redirect(url_for("main.login"))
 
     if request.method == "POST":
-        success, message = update_account_profile(user, request.form)
+        success, message = update_account_profile(user, request.form, request.files)
         flash(message, "success" if success else "danger")
         return redirect(url_for("main.account"))
 
