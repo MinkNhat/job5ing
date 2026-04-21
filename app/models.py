@@ -1,5 +1,5 @@
 from app import db
-
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # =========================
 # COMPANY
@@ -17,6 +17,8 @@ class Company(db.Model):
     description = db.Column(db.Text)
     is_approved = db.Column(db.Boolean, default=False)
     avatar_url = db.Column(db.String(255))
+
+    recruiters = db.relationship('Recruiter', backref='company', lazy=True)
 
 
 # =========================
@@ -41,10 +43,21 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_employer = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=db.func.now())
     last_login = db.Column(db.DateTime)
 
     avatar_url = db.Column(db.String(255))
+
+    # Relationships
+    cvs = db.relationship('CV', backref='user', lazy=True, cascade="all, delete-orphan")
+    recruiter_profile = db.relationship('Recruiter', backref='user', uselist=False, cascade="all, delete-orphan")
+    notifications = db.relationship('Notification', backref='user', lazy=True, cascade="all, delete-orphan")
+
+    def set_password(self, password):
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
 
 
 # =========================
@@ -65,6 +78,8 @@ class Recruiter(db.Model):
     )
 
     position = db.Column(db.String(100))
+
+    posts = db.relationship('Post', backref='recruiter', lazy=True)
 
 
 # =========================
@@ -88,8 +103,10 @@ class CV(db.Model):
     experience = db.Column(db.Text)
     cv_url = db.Column(db.String(255))
 
-    created_at = db.Column(db.DateTime)
-    last_modified = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
+    applications = db.relationship('Application', backref='cv', lazy=True)
 
 
 # =========================
@@ -120,8 +137,10 @@ class Post(db.Model):
 
     is_reported = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime)
-    last_modified = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
+    applications = db.relationship('Application', backref='post', lazy=True)
 
 
 # =========================
@@ -144,7 +163,7 @@ class Application(db.Model):
         nullable=False
     )
 
-    applied_at = db.Column(db.DateTime)
+    applied_at = db.Column(db.DateTime, default=db.func.now())
 
     status = db.Column(
         db.Enum('RECEIVED', 'INTERVIEW', 'APPROVED', 'REJECT'),
@@ -182,7 +201,6 @@ class Notification(db.Model):
         )
     )
 
-    created_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=db.func.now())
 
     is_read = db.Column(db.Boolean, default=False)
-

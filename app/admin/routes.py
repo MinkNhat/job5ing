@@ -3,6 +3,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from .service import (
     delete_user,
     get_current_admin,
+    get_dashboard_stats,
     get_user_by_id,
     get_users,
     toggle_user_status,
@@ -16,6 +17,12 @@ admin_bp = Blueprint("admin_panel", __name__, url_prefix="/admin")
 @admin_bp.app_context_processor
 def inject_admin_context():
     return {"current_admin": get_current_admin()}
+
+
+@admin_bp.route("/")
+def index():
+    stats = get_dashboard_stats()
+    return render_template("admin/index.html", stats=stats)
 
 
 @admin_bp.route("/accounts")

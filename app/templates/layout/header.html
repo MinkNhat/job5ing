@@ -1,8 +1,8 @@
 <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container">
-        <a class="navbar-brand navbar-brand-custom" href="{{ url_for('admin_panel.accounts') }}">
-            <span class="brand-mark">J</span>
-            <span class="brand-text">Job5ing Admin</span>
+        <a class="navbar-brand navbar-brand-custom" href="{{ url_for('admin_panel.index') }}">
+            <span class="brand-mark">J5</span>
+            <span class="brand-text">Job5ing <small class="text-muted" style="font-size: 0.8rem; font-weight: 400;">Admin Panel</small></span>
         </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
@@ -11,10 +11,22 @@
 
         <div class="collapse navbar-collapse" id="navbarMain">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 navbar-links">
-                <li class="nav-item"><a class="nav-link" href="#">Trang chủ</a></li>
-                <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_panel.accounts') }}">Tài khoản</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Tin tuyển dụng</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Báo cáo</a></li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.index' else '' }}" 
+                       href="{{ url_for('admin_panel.index') }}">Trang chủ</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.accounts' else '' }}" 
+                       href="{{ url_for('admin_panel.accounts') }}">Tài khoản</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.posts' else '' }}" 
+                       href="#">Tin tuyển dụng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.reports' else '' }}" 
+                       href="#">Báo cáo</a>
+                </li>
             </ul>
 
             <div class="dropdown navbar-user-menu">
@@ -23,7 +35,6 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
                     <li><a class="dropdown-item small" href="{{ url_for('admin_panel.profile') }}">Hồ sơ cá nhân</a></li>
-                    <li><a class="dropdown-item small" href="{{ url_for('admin_panel.accounts', role='admin') }}">Tài khoản quản trị viên</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item small text-danger" href="#">Đăng xuất</a></li>
                 </ul>

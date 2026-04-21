@@ -1,4 +1,9 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 class Config:
-    SECRET_KEY = "secret"
-    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:Nhat#1908@localhost/job_recruitment_db"
+    SECRET_KEY = os.getenv("SECRET_KEY", "default-secret-key")
+    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
