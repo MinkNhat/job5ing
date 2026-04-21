@@ -1,0 +1,54 @@
+<header class="site-header">
+    <div class="container site-header-inner">
+        <a class="site-logo" href="{{ url_for('main.index') }}">
+            <span class="site-logo-mark">
+                <img src="{{ url_for('static', filename='images/Logo.png') }}" alt="Job5ing logo">
+            </span>
+            <span class="site-logo-text">
+                <strong>JOB5ING</strong>
+                <small>Nền tảng việc làm</small>
+            </span>
+        </a>
+
+        <nav class="site-nav">
+            <a class="site-nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="{{ url_for('main.index') }}">Trang chủ</a>
+            <a class="site-nav-link" href="{{ url_for('main.index') }}#cv">Tạo CV</a>
+            <a class="site-nav-link" href="{{ url_for('main.index') }}#jobs">Đăng tuyển</a>
+            <a class="site-nav-link" href="{{ url_for('main.index') }}#contact">Liên hệ</a>
+        </nav>
+
+        {% if current_user %}
+        <div class="dropdown site-user-menu">
+            <a class="site-user-trigger text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <span class="site-user-avatar">
+                    {% if current_user.avatar_url %}
+                    <img src="{{ current_user.avatar_url }}">
+                    {% else %}
+                    {{ ((current_user.first_name or current_user.email or 'J')[:1]).upper() }}
+                    {% endif %}
+                </span>
+                <span class="site-user-meta">
+                    <strong>{{ ((current_user.last_name or '') ~ ' ' ~ (current_user.first_name or '')).strip() or current_user.email }}</strong>
+                    <small>{{ 'Nhà tuyển dụng' if current_user.is_employer else 'Ứng viên' }}</small>
+                </span>
+            </a>
+
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('main.account') }}">Tài khoản của tôi</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.index') }}#jobs">Việc làm đã lưu</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="post" action="{{ url_for('main.logout') }}">
+                        <button type="submit" class="dropdown-item text-danger">Đăng xuất</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+        {% else %}
+        <div class="site-actions">
+            <a class="site-action-btn primary" href="{{ url_for('main.register') }}">Đăng ký</a>
+            <a class="site-action-btn" href="{{ url_for('main.login') }}">Đăng nhập</a>
+        </div>
+        {% endif %}
+    </div>
+</header>
