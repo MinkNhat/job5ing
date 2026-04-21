@@ -208,6 +208,34 @@
     cursor: pointer;
 }
 
+/* Avatar Upload */
+.avatar-upload-wrapper {
+    position: relative;
+}
+
+.avatar-input {
+    display: none;
+}
+
+.avatar-upload-hint {
+    display: block;
+    padding: 40px 20px;
+    border: 2px dashed #d1d5db;
+    border-radius: 6px;
+    text-align: center;
+    background-color: #f9fafb;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+    color: #666;
+}
+
+.avatar-upload-wrapper:hover .avatar-upload-hint {
+    border-color: #667eea;
+    background-color: #f3f4f6;
+    color: #667eea;
+}
+
 /* Account Actions */
 .account-actions {
     display: flex;
