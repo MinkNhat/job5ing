@@ -10,10 +10,8 @@ class MyAdminIndexView(AdminIndexView):
 
 
 class UserAdminView(ModelView):
-    # Chỉ hiển thị các cột cần thiết khớp với UI
     column_list = ('id', 'email', 'is_admin', 'is_employer', 'is_active', 'created_at')
 
-    # Việt hóa nhãn khớp với Mockflow
     column_labels = {
         'id': 'ID',
         'email': 'Tên đăng nhập (Email)',
@@ -23,7 +21,6 @@ class UserAdminView(ModelView):
         'created_at': 'Ngày tham gia'
     }
 
-    # Định dạng ID 3 chữ số (001, 002)
     column_formatters = {
         'id': lambda v, c, m, p: f"{m.id:03d}"
     }
@@ -34,7 +31,6 @@ class PostAdminView(ModelView):
     column_filters = ('status', 'is_pinned')
     column_searchable_list = ('title',)
 
-    # Việt hóa cho quản lý tin tuyển dụng
     column_labels = {
         'id': 'Mã tin',
         'title': 'Tiêu đề',

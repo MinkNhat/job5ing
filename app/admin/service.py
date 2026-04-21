@@ -1,35 +1,61 @@
+from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.models import User
+from app.models import User, Company, Post, Application
+
+def get_dashboard_stats():
+    total_users = User.query.count()
+    total_companies = Company.query.count()
+    total_posts = Post.query.count()
+    total_applications = Application.query.count()
+
+    active_posts = Post.query.filter_by(status='ACTIVE').count()
+    pending_companies = Company.query.filter_by(is_approved=False).count()
+
+    return {
+        "total_users": total_users,
+        "total_companies": total_companies,
+        "total_posts": total_posts,
+        "total_applications": total_applications,
+        "active_posts": active_posts,
+        "pending_companies": pending_companies
+    }
 
 def get_users(page=1, keyword=None, role=None, status=None):
     query = User.query
+
     if keyword:
-        query = query.filter(User.email.contains(keyword))
+        keyword_filter = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                User.email.ilike(keyword_filter),
+                User.first_name.ilike(keyword_filter),
+                User.last_name.ilike(keyword_filter),
+                User.phone.ilike(keyword_filter)
+            )
+        )
 
-    if role:
+    if role and role != "all":
         role = role.strip().lower()
-        if role != "all":
-            if role in ("admin", "quản trị", "quan-tri"):
-                query = query.filter(User.is_admin.is_(True))
-            elif role in ("employer", "recruiter", "nhà tuyển dụng", "nha-tuyen-dung"):
-                query = query.filter(User.is_employer.is_(True))
-            elif role in ("user", "candidate", "ứng viên", "ung-vien"):
-                query = query.filter(
-                    User.is_admin.is_(False),
-                    User.is_employer.is_(False)
-                )
+        if role == "admin":
+            query = query.filter(User.is_admin.is_(True))
+        elif role == "employer":
+            query = query.filter(User.is_employer.is_(True))
+        elif role == "user":
+            query = query.filter(
+                User.is_admin.is_(False),
+                User.is_employer.is_(False)
+            )
 
-    if status:
+    if status and status != "all":
         status = status.strip().lower()
-        if status != "all":
-            if status in ("active", "hoạt động", "hoat-dong"):
-                query = query.filter(User.is_active.is_(True))
-            elif status in ("inactive", "locked", "blocked", "khóa", "khoa"):
-                query = query.filter(User.is_active.is_(False))
+        if status in ("active", "1"):
+            query = query.filter(User.is_active.is_(True))
+        elif status in ("inactive", "0"):
+            query = query.filter(User.is_active.is_(False))
 
-    return query.order_by(User.id.desc()).paginate(page=page, per_page=5)
+    return query.order_by(User.created_at.desc()).paginate(page=page, per_page=10)
 
 
 def get_user_by_id(user_id):
@@ -42,6 +68,7 @@ def get_current_admin():
 
 def update_user(user, form_data):
     email = (form_data.get("email") or "").strip()
+    password = form_data.get("password")
     first_name = (form_data.get("first_name") or "").strip() or None
     last_name = (form_data.get("last_name") or "").strip() or None
     phone = (form_data.get("phone") or "").strip() or None
@@ -58,6 +85,9 @@ def update_user(user, form_data):
         return False, "Email này đã tồn tại."
 
     user.email = email
+    if password:  # Nếu có nhập mật khẩu mới thì mới băm và cập nhật
+        user.set_password(password)
+        
     user.first_name = first_name
     user.last_name = last_name
     user.phone = phone

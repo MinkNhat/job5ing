@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng điều khiển Admin - Job5ing{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="fw-bold">Chào mừng quay trở lại, {{ current_admin.first_name if current_admin else 'Quản trị viên' }}!</h2>
+            <p class="text-muted">Dưới đây là tổng quan về tình hình hệ thống hôm nay.</p>
+        </div>
+    </div>
+
+    <!-- Thẻ thống kê chính -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Người dùng</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.total_users }}</h2>
+                    <p class="mt-2 mb-0 small text-white-50">Tổng số tài khoản</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-success text-white">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Công ty</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.total_companies }}</h2>
+                    <p class="mt-2 mb-0 small text-white-50">Doanh nghiệp tham gia</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-info text-white">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Tin tuyển dụng</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.total_posts }}</h2>
+                    <p class="mt-2 mb-0 small text-white-50">{{ stats.active_posts }} tin đang hoạt động</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-warning text-dark">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Ứng tuyển</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.total_applications }}</h2>
+                    <p class="mt-2 mb-0 small text-dark-50">Lượt nộp hồ sơ</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hàng quản lý nhanh -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="mb-0 fw-bold">Thông báo hệ thống</h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if stats.pending_companies > 0 %}
+                    <div class="alert alert-warning border-0 d-flex align-items-center mb-3">
+                        <div class="flex-grow-1">
+                            <strong>{{ stats.pending_companies }} Công ty đang chờ duyệt!</strong>
+                            <div class="small">Vui lòng kiểm tra danh sách doanh nghiệp mới đăng ký.</div>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-warning ms-3">Xem ngay</a>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0 italic">Hiện không có yêu cầu phê duyệt mới nào.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="mb-0 fw-bold">Lối tắt quản lý</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('admin_panel.accounts') }}" class="list-group-item list-group-item-action py-3 border-0">
+                        Quản lý tài khoản
+                    </a>
+                    <a href="{{ url_for('admin_panel.profile') }}" class="list-group-item list-group-item-action py-3 border-0">
+                        Hồ sơ cá nhân
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action py-3 border-0">
+                        Cấu hình hệ thống
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
