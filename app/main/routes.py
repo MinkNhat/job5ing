@@ -23,11 +23,9 @@ from .services import (
 
 main_bp = Blueprint("main", __name__)
 
-
 @main_bp.app_context_processor
 def provide_public_context():
     return inject_public_auth_context()
-
 
 @main_bp.route("/")
 def index():
@@ -36,7 +34,6 @@ def index():
         featured_jobs=HOME_FEATURED_JOBS,
         locations=HOME_LOCATIONS,
     )
-
 
 @main_bp.route("/register", methods=["GET", "POST"])
 def register():
@@ -135,7 +132,6 @@ def google_callback():
         db.session.rollback()
         flash("Không thể hoàn tất đăng nhập Google lúc này. Vui lòng kiểm tra lại cấu hình và thử lại.", "danger")
         return redirect(url_for("main.login"))
-
 
 @main_bp.route("/logout", methods=["POST"])
 def logout():
