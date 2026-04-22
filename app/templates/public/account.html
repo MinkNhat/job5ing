@@ -1,6 +1,14 @@
-{% extends 'base.html' %}
+{% extends 'base_public.html' %}
 
 {% block title %}Job5ing | Tài khoản{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public/account.css') }}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/account.js') }}"></script>
+{% endblock %}
 
 {% block content %}
 <section class="account-section">
@@ -28,13 +36,12 @@
                 <div class="account-card">
                     <div class="account-card-heading">
                         <div>
-                            <span class="section-kicker">Hồ sơ đăng nhập</span>
                             <h2>Thông tin tài khoản</h2>
                             <p>Cập nhật hồ sơ để navbar và phiên đăng nhập luôn hiển thị đúng tài khoản hiện tại của bạn.</p>
                         </div>
                     </div>
 
-                    <form method="post" class="account-form">
+                    <form method="post" class="account-form" enctype="multipart/form-data">
                         <div class="account-grid">
                             <div class="account-field">
                                 <label for="last_name">Họ</label>

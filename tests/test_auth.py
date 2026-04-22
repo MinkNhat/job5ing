@@ -111,6 +111,27 @@ class AuthTestCase(unittest.TestCase):
             self.assertIsNotNone(user)
             self.assertFalse(user.is_employer)
 
+    def test_register_success_employer(self):
+        response = self.client.post(
+            "/register",
+            data={
+                "email": "employer@example.com",
+                "password": "Password123!",
+                "confirm_password": "Password123!",
+                "first_name": "Employer",
+                "last_name": "User",
+                "is_employer": "on",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Đăng ký tài khoản thành công", response.get_data(as_text=True))
+        
+        with self.app.app_context():
+            user = User.query.filter_by(email="employer@example.com").first()
+            self.assertIsNotNone(user)
+            self.assertTrue(user.is_employer)
+
     def test_register_duplicate_email(self):
         response = self.client.post(
             "/register",
@@ -134,6 +155,20 @@ class AuthTestCase(unittest.TestCase):
             follow_redirects=True,
         )
         self.assertIn("Mật khẩu xác nhận không khớp", response.get_data(as_text=True))
+
+    def test_register_weak_password(self):
+        response = self.client.post(
+            "/register",
+            data={
+                "email": "weak@example.com",
+                "password": "123",
+                "confirm_password": "123",
+            },
+            follow_redirects=True,
+        )
+        self.assertIn("Mật khẩu phải có ít nhất 8 ký tự", response.get_data(as_text=True))
+
+    # --- Test Login ---
 
     def test_login_success(self):
         response = self.client.post(
