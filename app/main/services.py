@@ -175,7 +175,9 @@ def create_account(form_data):
     try:
         db.session.add(user)
         db.session.commit()
-        return True, "Đăng ký tài khoản thành công. Bạn có thể đăng nhập bằng email hoặc Google nếu dùng cùng email này."
+        # Tự động đăng nhập ngay sau khi đăng ký thành công
+        finalize_login(user)
+        return True, "Đăng ký tài khoản thành công."
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể tạo tài khoản lúc này. Vui lòng thử lại."

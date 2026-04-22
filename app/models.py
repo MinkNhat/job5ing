@@ -12,11 +12,12 @@ class Company(db.Model):
     location = db.Column(db.String(255))
     website = db.Column(db.String(255))
     establish_date = db.Column(db.Date)
-    scale = db.Column(db.Integer)
+    scale = db.Column(db.String(50))
     tax_code = db.Column(db.String(50), unique=True)
     description = db.Column(db.Text)
     is_approved = db.Column(db.Boolean, default=False)
     avatar_url = db.Column(db.String(255))
+    business_license = db.Column(db.String(255), nullable=False)
 
     recruiters = db.relationship('Recruiter', backref='company', lazy=True)
 

@@ -872,7 +872,7 @@ a {
     height: 16px;
     min-height: 16px;
     margin: 0;
-    accent-color: #ff9550;
+    accent-color: #dadada;
 }
 
 .auth-centered-link {
@@ -1116,5 +1116,160 @@ a {
 
     .site-nav-link {
         text-align: center;
+    }
+}
+
+/* COMPANY REQUEST MODAL */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 34, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 1;
+    visibility: visible;
+    transition: all 0.3s ease;
+}
+
+.custom-modal-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.custom-modal-content {
+    background: #fff;
+    width: 90%;
+    max-width: 650px;
+    border-radius: 20px;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.15);
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-modal-overlay.hidden .custom-modal-content {
+    transform: translateY(20px);
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(188, 205, 224, 0.4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--site-text);
+}
+
+.close-modal-btn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--site-subtle);
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+    color: #ef4437;
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+/* Grid cho form trong modal */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--site-text);
+}
+
+.text-danger {
+    color: #ef4437;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(188, 205, 224, 0.4);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8fbff;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.btn-cancel {
+    background: #fff;
+    border: 1px solid #c5d7ea;
+    padding: 10px 20px;
+    border-radius: 10px;
+    color: var(--site-subtle);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #f1f5f9;
+    color: var(--site-text);
+}
+
+.form-control {
+    width: 100%;
+    border: 2px solid rgba(28, 48, 78, 0.14);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    border-color: rgba(45, 128, 220, 0.48);
+    box-shadow: 0 0 0 2px rgba(45, 128, 220, 0.12);
+}
+
+.upload-area input[type="file"] {
+    padding: 8px;
+    font-size: 0.85rem;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    .auth-centered-card {
+        width: 90% !important;
     }
 }

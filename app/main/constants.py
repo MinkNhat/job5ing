@@ -27,3 +27,10 @@ HOME_FEATURED_JOBS = [
     },
 ]
 
+COMPANY_SCALE_OPTIONS = [
+    "1-50 nhân viên",
+    "51-200 nhân viên",
+    "201-500 nhân viên",
+    "500+ nhân viên",
+]
+

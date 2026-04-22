@@ -1,0 +1,151 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Job5ing | Kết nối Công ty{% endblock %}
+
+{% block content %}
+<section class="auth-centered-section" style="min-height: calc(100vh - 200px); display: flex; align-items: center;">
+    <div class="container">
+        <div class="auth-centered-shell">
+            <div class="auth-centered-card" style="width: 45%;">
+                <div class="auth-centered-title">Xác nhận Công ty trực thuộc</div>
+
+                <form class="auth-centered-form" method="POST" action="{{ url_for('main.submit_join_request') }}">
+                    <div class="form-group">
+                        <label>Chọn công ty trực thuộc <span class="text-danger">*</span></label>
+                        <select name="company_id" class="form-control" required style="cursor: pointer;">
+                            <option value="" disabled selected>Tìm và chọn công ty</option>
+                            {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nhập chức vụ của bạn <span class="text-danger">*</span></label>
+                        <input type="text" name="position" class="form-control" placeholder="VD: Trưởng phòng nhân sự" required>
+                    </div>
+
+                    <button type="submit" class="auth-centered-submit" style="margin-top: 10px;">
+                        Gửi yêu cầu gia nhập
+                    </button>
+                </form>
+
+                <div class="auth-centered-divider">
+                    <span>HOẶC</span>
+                </div>
+
+                <div style="text-align: center;">
+                    <button type="button" id="openModalBtn" class="site-action-btn" style="width: 100%; border: 1px solid #c5d7ea;">
+                        Đăng ký Công ty mới
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="newCompanyModal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-content">
+        <div class="modal-header">
+            <h3>Đăng ký hồ sơ Công ty</h3>
+            <button class="close-modal-btn" id="closeModalBtn">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <form id="newCompanyForm" method="POST" action="{{ url_for('main.register_company') }}" enctype="multipart/form-data">
+                
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Tên công ty <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="VD: Công ty CP Job5ing" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Mã số thuế <span class="text-danger">*</span></label>
+                        <input type="text" name="taxCode" class="form-control" placeholder="Mã số thuế doanh nghiệp" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Chức vụ của bạn <span class="text-danger">*</span></label>
+                    <input type="text" name="position" class="form-control" placeholder="VD: Giám đốc điều hành" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Địa chỉ trụ sở chính</label>
+                    <input type="text" name="location" class="form-control" placeholder="Số nhà, đường, quận/huyện, tỉnh/thành phố">
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Trang web</label>
+                        <input type="url" name="website" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày thành lập</label>
+                        <input type="date" name="establishDate" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Quy mô nhân sự</label>
+                    <select name="scale" class="form-control">
+                        {% for option in scale_options %}
+                            <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-grid-2 upload-area">
+                    <div class="form-group">
+                        <label>Logo công ty (Ảnh)</label>
+                        <input type="file" name="avatar" class="form-control" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label>Giấy phép kinh doanh <span class="text-danger">*</span></label>
+                        <input type="file" name="businessLicense" class="form-control" accept=".pdf, image/*" required>
+                        <small style="color: var(--site-subtle); font-size: 0.8rem;">Dùng để xác thực (Không hiển thị công khai)</small>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" id="cancelModalBtn">Hủy bỏ</button>
+            <button type="submit" form="newCompanyForm" class="auth-centered-submit" style="padding: 10px 24px;">Gửi Đăng ký</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const modal = document.getElementById("newCompanyModal");
+        const openBtn = document.getElementById("openModalBtn");
+        const closeBtn = document.getElementById("closeModalBtn");
+        const cancelBtn = document.getElementById("cancelModalBtn");
+
+        // Mở Modal
+        openBtn.addEventListener("click", function() {
+            modal.classList.remove("hidden");
+            document.body.style.overflow = "hidden"; // Chặn scroll web khi mở modal
+        });
+
+        // Đóng Modal (Dùng chung cho nút X và nút Hủy)
+        function closeModal() {
+            modal.classList.add("hidden");
+            document.body.style.overflow = "auto"; // Mở lại scroll
+        }
+
+        closeBtn.addEventListener("click", closeModal);
+        cancelBtn.addEventListener("click", closeModal);
+
+        // Đóng khi click ra ngoài vùng modal
+        window.addEventListener("click", function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    });
+</script>
+{% endblock %}
