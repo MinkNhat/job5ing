@@ -23,10 +23,6 @@ from .services import (
 
 main_bp = Blueprint("main", __name__)
 
-@main_bp.app_context_processor
-def provide_public_context():
-    return inject_public_auth_context()
-
 @main_bp.route("/")
 def index():
     return render_template(

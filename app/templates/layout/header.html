@@ -1,44 +1,62 @@
-<nav class="navbar navbar-expand-lg navbar-custom">
-    <div class="container">
-        <a class="navbar-brand navbar-brand-custom" href="{{ url_for('admin_panel.index') }}">
-            <span class="brand-mark">J5</span>
-            <span class="brand-text">Job5ing <small class="text-muted" style="font-size: 0.8rem; font-weight: 400;">Admin Panel</small></span>
+<header class="site-header">
+    <div class="container site-header-inner">
+        <a class="site-logo" href="{{ url_for('main.index') }}">
+            <span class="site-logo-mark">
+                <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job5ing logo">
+            </span>
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <nav class="site-nav">
+            <a class="site-nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="{{ url_for('main.index') }}">Trang chủ</a>
+            <a class="site-nav-link" href="{{ url_for('main.index') }}#cv">Tạo CV</a>
+            <a class="site-nav-link" href="{{ url_for('main.index') }}#jobs">Đăng tuyển</a>
+            <a class="site-nav-link" href="{{ url_for('main.index') }}#contact">Liên hệ</a>
+        </nav>
 
-        <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 navbar-links">
-                <li class="nav-item">
-                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.index' else '' }}" 
-                       href="{{ url_for('admin_panel.index') }}">Trang chủ</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.accounts' else '' }}" 
-                       href="{{ url_for('admin_panel.accounts') }}">Tài khoản</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.posts' else '' }}" 
-                       href="#">Tin tuyển dụng</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ 'active' if request.endpoint == 'admin_panel.reports' else '' }}" 
-                       href="#">Báo cáo</a>
-                </li>
-            </ul>
+        {% if current_user %}
+            {% if current_user.is_admin %}
+                <div class="site-actions">
+                    <a class="site-action-btn primary" href="{{ url_for('admin_panel.index') }}">Trang Admin</a>
+                    <form method="post" action="{{ url_for('main.logout') }}" style="display: inline;">
+                        <button type="submit" class="site-action-btn">Đăng xuất</button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="dropdown site-user-menu">
+                    <a class="site-user-trigger text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span class="site-user-avatar">
+                            {% if current_user.avatar_url %}
+                                <img src="{{ current_user.avatar_url }}" style="width: 32px; height: 32px; border-radius: 50%;">
+                            {% else %}
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">
+                                    {{ ((current_user.first_name or current_user.email or 'J')[:1]).upper() }}
+                                </div>
+                            {% endif %}
+                        </span>
+                        <span class="site-user-meta">
+                            Hi {{ current_user.first_name or 'User' }}
+                        </span>
+                    </a>
 
-            <div class="dropdown navbar-user-menu">
-                <a class="nav-user-trigger text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                    {{ ((current_admin.last_name or '') ~ ' ' ~ (current_admin.first_name or '')).strip() if current_admin else 'Hi Admin' }}
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
-                    <li><a class="dropdown-item small" href="{{ url_for('admin_panel.profile') }}">Hồ sơ cá nhân</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item small text-danger" href="#">Đăng xuất</a></li>
-                </ul>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('main.account') }}">Thông tin cá nhân</a></li>
+                        {% if current_user.is_employer %}
+                            <li><a class="dropdown-item" href="#">Chuyển sang tài khoản công ty</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="{{ url_for('main.logout') }}">
+                                <button type="submit" class="dropdown-item text-danger">Đăng xuất</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="site-actions">
+                <a class="site-action-btn" href="{{ url_for('main.register') }}">Đăng ký</a>
+                <a class="site-action-btn" href="{{ url_for('main.login') }}">Đăng nhập</a>
             </div>
-        </div>
+        {% endif %}
     </div>
-</nav>
+</header>

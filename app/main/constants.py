@@ -1,8 +1,8 @@
 HOME_LOCATIONS = [
-    "TP. Ho Chi Minh",
-    "Ha Noi",
-    "Da Nang",
-    "Can Tho",
+    "TP. Hồ Chí Minh",
+    "Hà Nội",
+    "Đà Nẵng",
+    "Cần Thơ",
 ]
 
 

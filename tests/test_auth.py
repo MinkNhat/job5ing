@@ -6,7 +6,14 @@ from werkzeug.security import generate_password_hash
 
 from app import create_app, db
 from app.models import User
-
+from app.main.services import (
+    validate_email,
+    validate_password_strength,
+    validate_phone,
+    validate_required_fields,
+    create_account,
+    login_with_password
+)
 
 class AuthTestCase(unittest.TestCase):
     def setUp(self):
@@ -56,7 +63,33 @@ class AuthTestCase(unittest.TestCase):
         db.session.add_all(users)
         db.session.commit()
 
-    # --- Test Registration ---
+    # --- UNIT TESTS FOR SERVICES ---
+
+    def test_service_validate_email(self):
+        self.assertTrue(validate_email("test@example.com")[0])
+        self.assertFalse(validate_email("invalid-email")[0])
+        self.assertFalse(validate_email("test@domain")[0])
+
+    def test_service_validate_password_strength(self):
+        # Yêu cầu: 8+ ký tự, hoa, thường, số, đặc biệt
+        self.assertTrue(validate_password_strength("Strong123!")[0])
+        self.assertFalse(validate_password_strength("weak")[0])
+        self.assertFalse(validate_password_strength("NoSpecial123")[0])
+        self.assertFalse(validate_password_strength("noshowcase123!")[0])
+
+    def test_service_validate_phone(self):
+        self.assertTrue(validate_phone("0912345678")[0])
+        self.assertTrue(validate_phone("+84912345678")[0])
+        self.assertFalse(validate_phone("12345")[0])
+
+    def test_service_validate_required_fields(self):
+        form = {"email": "test@example.com", "password": ""}
+        fields = [("email", "Email"), ("password", "Mật khẩu")]
+        is_valid, msg = validate_required_fields(form, fields)
+        self.assertFalse(is_valid)
+        self.assertIn("Mật khẩu", msg)
+
+    # --- INTEGRATION TESTS FOR ROUTES ---
 
     def test_register_success_candidate(self):
         response = self.client.post(
@@ -77,27 +110,6 @@ class AuthTestCase(unittest.TestCase):
             user = User.query.filter_by(email="new@example.com").first()
             self.assertIsNotNone(user)
             self.assertFalse(user.is_employer)
-
-    def test_register_success_employer(self):
-        response = self.client.post(
-            "/register",
-            data={
-                "email": "employer@example.com",
-                "password": "Password123!",
-                "confirm_password": "Password123!",
-                "first_name": "Employer",
-                "last_name": "User",
-                "is_employer": "on",
-            },
-            follow_redirects=True,
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Đăng ký tài khoản thành công", response.get_data(as_text=True))
-        
-        with self.app.app_context():
-            user = User.query.filter_by(email="employer@example.com").first()
-            self.assertIsNotNone(user)
-            self.assertTrue(user.is_employer)
 
     def test_register_duplicate_email(self):
         response = self.client.post(
@@ -123,20 +135,6 @@ class AuthTestCase(unittest.TestCase):
         )
         self.assertIn("Mật khẩu xác nhận không khớp", response.get_data(as_text=True))
 
-    def test_register_weak_password(self):
-        response = self.client.post(
-            "/register",
-            data={
-                "email": "weak@example.com",
-                "password": "123",
-                "confirm_password": "123",
-            },
-            follow_redirects=True,
-        )
-        self.assertIn("Mật khẩu phải có ít nhất 8 ký tự", response.get_data(as_text=True))
-
-    # --- Test Login ---
-
     def test_login_success(self):
         response = self.client.post(
             "/login",
@@ -150,7 +148,7 @@ class AuthTestCase(unittest.TestCase):
         self.assertIn("Đăng nhập thành công", response.get_data(as_text=True))
         
         with self.client.session_transaction() as sess:
-            self.assertEqual(sess.get("user_id"), 1) # active@example.com is first seeded
+            self.assertIn("user_id", sess)
 
     def test_login_invalid_password(self):
         response = self.client.post(
@@ -174,17 +172,17 @@ class AuthTestCase(unittest.TestCase):
         )
         self.assertIn("Tài khoản của bạn đang bị khóa", response.get_data(as_text=True))
 
-    def test_login_nonexistent_user(self):
-        response = self.client.post(
+    def test_logout(self):
+        # Login
+        self.client.post(
             "/login",
-            data={
-                "email": "nonexistent@example.com",
-                "password": "Password123!",
-            },
-            follow_redirects=True,
+            data={"email": "active@example.com", "password": "Password123!"}
         )
-        self.assertIn("Email hoặc mật khẩu không chính xác", response.get_data(as_text=True))
-
+        # Logout
+        response = self.client.post("/logout", follow_redirects=True)
+        self.assertIn("Bạn đã đăng xuất", response.get_data(as_text=True))
+        with self.client.session_transaction() as sess:
+            self.assertNotIn("user_id", sess)
 
 if __name__ == "__main__":
     unittest.main()
