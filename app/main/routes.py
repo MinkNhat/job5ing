@@ -27,9 +27,11 @@ from app import db
 
 main_bp = Blueprint("main", __name__)
 
+
 @main_bp.app_context_processor
 def provide_public_context():
     return inject_public_auth_context()
+
 
 @main_bp.route("/")
 def index():
@@ -64,7 +66,7 @@ def index():
         {val: i for i, val in enumerate(SALARY_OPTIONS)},
         value=Post.salary_range
     )
-    
+
     exp_rank = case(
         {val: i for i, val in enumerate(EXPERIENCE_OPTIONS)},
         value=Post.experience
@@ -93,6 +95,7 @@ def index():
         salary_options=SALARY_OPTIONS,
     )
 
+
 @main_bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -112,10 +115,10 @@ def recruiter_request():
     user = require_logged_in_user()
     if not user:
         return redirect(url_for("main.login"))
-    
+
     companies = Company.query.all()
-    return render_template("auth/recruiter_request.html", 
-                           companies=companies, 
+    return render_template("auth/recruiter_request.html",
+                           companies=companies,
                            scale_options=COMPANY_SCALE_OPTIONS,
                            locations=HOME_LOCATIONS)
 
@@ -124,14 +127,14 @@ def submit_join_request():
     user = require_logged_in_user()
     if not user:
         return redirect(url_for("main.login"))
-    
+
     company_id = request.form.get("company_id")
     position = request.form.get("position")
-    
+
     if not company_id or not position:
         flash("Vui lòng điền đầy đủ thông tin.", "danger")
         return redirect(url_for("main.recruiter_request"))
-    
+
     # Tạo recruiter mới
     recruiter = Recruiter(
         user_id=user.id,
@@ -140,7 +143,7 @@ def submit_join_request():
         is_approved=False,
         is_company_admin=False
     )
-    
+
     try:
         db.session.add(recruiter)
         user.is_employer = True # Đảm bảo user có flag employer
@@ -158,7 +161,7 @@ def register_company():
     user = require_logged_in_user()
     if not user:
         return redirect(url_for("main.login"))
-    
+
     name = request.form.get("name")
     tax_code = request.form.get("taxCode")
     city = request.form.get("city")
@@ -167,7 +170,7 @@ def register_company():
     establish_date_str = request.form.get("establishDate")
     scale = request.form.get("scale")
     position = request.form.get("position")
-    
+
     if not name or not tax_code:
         flash("Vui lòng điền tên công ty và mã số thuế.", "danger")
         return redirect(url_for("main.recruiter_request"))
@@ -189,7 +192,7 @@ def register_company():
     # Xử lý File (Giả lập hoặc lấy tên file để lưu vào DB)
     avatar_file = request.files.get("avatar")
     license_file = request.files.get("businessLicense")
-    
+
     business_license_path = "pending"
     if license_file and license_file.filename:
         business_license_path = license_file.filename # Trong thực tế sẽ dùng secure_filename và save()
@@ -201,7 +204,7 @@ def register_company():
             establish_date = datetime.strptime(establish_date_str, "%Y-%m-%d").date()
         except ValueError:
             pass
-            
+
     # Tạo công ty mới
     new_company = Company(
         name=name,
@@ -214,11 +217,11 @@ def register_company():
         business_license=business_license_path,
         avatar_url=avatar_file.filename if avatar_file and avatar_file.filename else None
     )
-    
+
     try:
         db.session.add(new_company)
         db.session.flush()
-        
+
         # Tạo recruiter cho user này
         recruiter = Recruiter(
             user_id=user.id,
@@ -230,11 +233,11 @@ def register_company():
         db.session.add(recruiter)
         user.is_employer = True
         db.session.commit()
-        
+
         # Cập nhật session ngay lập tức
         session["user_role"] = "employer"
         session["user_name"] = f"{user.last_name or ''} {user.first_name or ''}".strip() or user.email
-        
+
         flash("Đăng ký công ty thành công. Công ty đang chờ hệ thống phê duyệt.", "success")
         return redirect(url_for("main.index"))
     except SQLAlchemyError as e:
@@ -331,12 +334,12 @@ def google_callback():
     try:
         token_data = fetch_google_tokens(code)
         profile = fetch_google_userinfo(token_data["access_token"])
-        
+
         # Kiểm tra xem user có muốn đăng ký làm recruiter không (lấy từ session đã lưu ở route google_login)
         target_is_employer = session.pop("google_is_employer", False)
-        
+
         success, message = login_with_google_profile(profile)
-        
+
         if success and target_is_employer:
             user = User.query.filter_by(email=profile.get("email").lower()).first()
             if user:
@@ -350,6 +353,8 @@ def google_callback():
         flash(message, "success" if success else "danger")
         return redirect(url_for("main.index" if success else "main.login"))
     except (HTTPError, URLError, KeyError, SQLAlchemyError, json.JSONDecodeError):
+        from app import db
+
         db.session.rollback()
         flash("Không thể hoàn tất đăng nhập Google lúc này. Vui lòng kiểm tra lại cấu hình và thử lại.", "danger")
         return redirect(url_for("main.login"))

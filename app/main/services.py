@@ -64,11 +64,11 @@ def validate_phone(phone):
 def validate_tax_code(tax_code):
     if not tax_code:
         return False, "Mã số thuế không được để trống."
-    
+
     mst = tax_code.strip().replace("-", "")
     if not (len(mst) == 10 or len(mst) == 13):
         return False, "Mã số thuế phải có 10 hoặc 13 chữ số."
-    
+
     if not mst.isdigit():
         return False, "Mã số thuế chỉ được chứa các chữ số."
 
@@ -330,3 +330,4 @@ def login_with_google_profile(profile):
 
     finalize_login(user)
     return True, "Đăng nhập Google thành công."
+
