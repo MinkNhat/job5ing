@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Job5ing | Đăng nhập{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block flash_wrap_class %}auth-flash-wrap{% endblock %}
+
+{% block content %}
+<section class="auth-centered-section">
+    <div class="container">
+        <div class="auth-centered-shell">
+            <div class="auth-centered-card">
+                <div class="auth-centered-brand auth-centered-brand-login">
+                    <a href="{{ url_for('main.index') }}">
+                        <img class="auth-centered-logo-image" src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job5ing logo">
+                    </a>
+                </div>
+
+                <h2 class="auth-centered-title">ĐĂNG NHẬP</h2>
+
+                <form method="post" class="auth-centered-form">
+                    <label>
+                        Tên đăng nhập
+                        <input type="email" name="email" value="{{ request.form.get('email', '') }}" placeholder="Nhập tên đăng nhập" required>
+                    </label>
+
+                    <label>
+                        Mật khẩu
+                        <div class="auth-centered-password">
+                            <input type="password" name="password" placeholder="Nhập mật khẩu" required>
+                        </div>
+                    </label>
+
+                    <div class="auth-centered-row">
+                        <label class="auth-centered-check">
+                            <input type="checkbox" name="remember_me">
+                            <span>Ghi nhớ tôi</span>
+                        </label>
+                        <a href="#" class="auth-centered-link">Quên mật khẩu?</a>
+                    </div>
+
+                    <button type="submit" class="auth-centered-submit">ĐĂNG NHẬP</button>
+                </form>
+
+                <div class="auth-centered-divider"><span>HOẶC</span></div>
+
+                <a href="{{ url_for('main.google_login') }}" class="auth-centered-google {% if not google_login_ready %}disabled{% endif %}">
+                    <span class="auth-centered-google-mark">G</span>
+                    <span>Tiếp tục với Google</span>
+                </a>
+
+                <p class="auth-centered-bottom">
+                    Bạn cần một tài khoản?
+                    <a href="{{ url_for('main.register') }}">Đăng ký</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

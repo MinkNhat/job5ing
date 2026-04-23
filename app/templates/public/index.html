@@ -1,0 +1,56 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Job5ing | Trang chủ{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container">
+        <div class="hero-banner-image">
+            <img src="{{ url_for('static', filename='images/Banner.png') }}" alt="Job5ing Banner">
+        </div>
+
+        <form class="search-panel" method="get" action="{{ url_for('main.index') }}">
+            <input type="text" name="keyword" placeholder="Tìm kiếm việc làm, công ty..." value="{{ request.args.get('keyword', '') }}">
+
+            <select name="location">
+                {% for location in locations %}
+                <option value="{{ location }}" {% if request.args.get('location', locations[0]) == location %}selected{% endif %}>{{ location }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Tìm kiếm</button>
+        </form>
+
+        <div class="search-tools-row">
+            <button type="button" class="filter-btn">
+                Bộ lọc <i class="fas fa-filter"></i>
+            </button>
+            <button type="button" class="sort-dropdown">
+                Sắp xếp theo: Phù hợp nhất <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+<section class="jobs-section" id="jobs">
+    <div class="container">
+        <div class="job-grid">
+            {% for job in featured_jobs %}
+            <article class="job-card">
+                <div class="job-card-logo">
+                    <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
+                </div>
+                <div class="job-card-body">
+                    <h3>{{ job.title }}</h3>
+                    <p class="company-name">{{ job.company }}</p>
+                    <div class="job-card-tags">
+                        <span>{{ job.salary }}</span>
+                        <span>{{ job.experience }}</span>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
