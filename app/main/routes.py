@@ -27,9 +27,11 @@ from app import db
 
 main_bp = Blueprint("main", __name__)
 
+
 @main_bp.app_context_processor
 def provide_public_context():
     return inject_public_auth_context()
+
 
 @main_bp.route("/")
 def index():
@@ -77,9 +79,9 @@ def index():
         query = query.order_by(exp_rank.desc(), Post.created_at.desc())
     elif sort_by == "newest":
         query = query.order_by(Post.created_at.desc())
-    else: # Default relevance (PINNED first, then newest)
+    else:  # Default relevance (PINNED first, then newest)
         query = query.order_by(
-            Post.status.desc(), # 'PINNED' > 'ACTIVE'
+            Post.status.desc(),  # 'PINNED' > 'ACTIVE'
             Post.created_at.desc()
         )
 
@@ -92,6 +94,7 @@ def index():
         experience_options=EXPERIENCE_OPTIONS,
         salary_options=SALARY_OPTIONS,
     )
+
 
 @main_bp.route("/register", methods=["GET", "POST"])
 def register():
@@ -119,6 +122,7 @@ def recruiter_request():
                            scale_options=COMPANY_SCALE_OPTIONS,
                            locations=HOME_LOCATIONS)
 
+
 @main_bp.route("/submit-join-request", methods=["POST"])
 def submit_join_request():
     user = require_logged_in_user()
@@ -143,7 +147,7 @@ def submit_join_request():
 
     try:
         db.session.add(recruiter)
-        user.is_employer = True # Đảm bảo user có flag employer
+        user.is_employer = True  # Đảm bảo user có flag employer
         db.session.commit()
         session["user_role"] = "employer"
         flash("Yêu cầu gia nhập công ty đã được gửi và đang chờ duyệt.", "success")
@@ -152,6 +156,7 @@ def submit_join_request():
         db.session.rollback()
         flash("Có lỗi xảy ra, vui lòng thử lại.", "danger")
         return redirect(url_for("main.recruiter_request"))
+
 
 @main_bp.route("/register-company", methods=["POST"])
 def register_company():
@@ -192,7 +197,7 @@ def register_company():
 
     business_license_path = "pending"
     if license_file and license_file.filename:
-        business_license_path = license_file.filename # Trong thực tế sẽ dùng secure_filename và save()
+        business_license_path = license_file.filename  # Trong thực tế sẽ dùng secure_filename và save()
 
     from datetime import datetime
     establish_date = None
@@ -239,7 +244,7 @@ def register_company():
         return redirect(url_for("main.index"))
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"DEBUG DB ERROR: {str(e)}") # In ra console để bạn theo dõi
+        print(f"DEBUG DB ERROR: {str(e)}")  # In ra console để bạn theo dõi
         flash(f"Lỗi hệ thống: {str(e)[:100]}...", "danger")
         return redirect(url_for("main.recruiter_request"))
     except Exception as e:
@@ -248,14 +253,13 @@ def register_company():
         flash("Có lỗi bất ngờ xảy ra, vui lòng thử lại.", "danger")
         return redirect(url_for("main.recruiter_request"))
 
+
 @main_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        success, message, user = login_with_password(request.form)
+        success, message = login_with_password(request.form)
         flash(message, "success" if success else "danger")
         if success:
-            if user.is_admin:
-                return redirect(url_for("admin_panel.index"))
             return redirect(url_for("main.index"))
 
     return render_template(
@@ -350,17 +354,12 @@ def google_callback():
                 return redirect(url_for("main.recruiter_request"))
 
         flash(message, "success" if success else "danger")
-        if success:
-            if user.is_admin:
-                return redirect(url_for("admin_panel.index"))
-            return redirect(url_for("main.index"))
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.index" if success else "main.login"))
     except (HTTPError, URLError, KeyError, SQLAlchemyError, json.JSONDecodeError):
-        from app import db
-
         db.session.rollback()
         flash("Không thể hoàn tất đăng nhập Google lúc này. Vui lòng kiểm tra lại cấu hình và thử lại.", "danger")
         return redirect(url_for("main.login"))
+
 
 @main_bp.route("/logout", methods=["POST"])
 def logout():
