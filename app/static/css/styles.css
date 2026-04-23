@@ -427,7 +427,7 @@ a {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    flex: 0 0 46px;
+    /*flex: 0 0 46px;*/
 }
 
 .site-user-avatar img {
