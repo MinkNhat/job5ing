@@ -1,13 +1,21 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from .service import (
+    approve_company,
+    delete_company,
+    delete_post,
     delete_user,
+    get_companies,
+    get_company_by_id,
     get_current_admin,
     get_dashboard_stats,
+    get_post_by_id,
+    get_posts,
     get_user_by_id,
     get_users,
     toggle_user_status,
     update_admin_profile,
+    update_post_status,
     update_user,
 )
 
@@ -92,3 +100,82 @@ def delete_account(user_id):
     success, message = delete_user(user)
     flash(message, "success" if success else "danger")
     return redirect(url_for("admin_panel.accounts", **request.args))
+
+
+@admin_bp.route("/posts")
+def posts():
+    page = request.args.get("page", 1, type=int)
+    keyword = request.args.get("keyword")
+    status = request.args.get("status")
+    is_reported = request.args.get("is_reported")
+
+    if is_reported == "1":
+        is_reported = True
+    elif is_reported == "0":
+        is_reported = False
+    else:
+        is_reported = None
+
+    posts = get_posts(page, keyword, status, is_reported)
+
+    return render_template("admin/posts.html", posts=posts)
+
+
+@admin_bp.route("/posts/<int:post_id>/status", methods=["POST"])
+def change_post_status(post_id):
+    post = get_post_by_id(post_id)
+    if not post:
+        flash("Không tìm thấy tin tuyển dụng.", "danger")
+        return redirect(url_for("admin_panel.posts"))
+
+    new_status = request.form.get("status")
+    success, message = update_post_status(post, new_status)
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("admin_panel.posts", **request.args))
+
+
+@admin_bp.route("/posts/<int:post_id>/delete", methods=["POST"])
+def delete_post_route(post_id):
+    post = get_post_by_id(post_id)
+    if not post:
+        flash("Không tìm thấy tin tuyển dụng.", "danger")
+        return redirect(url_for("admin_panel.posts"))
+
+    success, message = delete_post(post)
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("admin_panel.posts", **request.args))
+
+
+@admin_bp.route("/companies")
+def companies():
+    page = request.args.get("page", 1, type=int)
+    keyword = request.args.get("keyword")
+    status = request.args.get("status", "all")
+
+    companies = get_companies(page, keyword, status)
+
+    return render_template("admin/companies.html", companies=companies)
+
+
+@admin_bp.route("/companies/<int:company_id>/approve", methods=["POST"])
+def approve_company_route(company_id):
+    company = get_company_by_id(company_id)
+    if not company:
+        flash("Không tìm thấy thông tin công ty.", "danger")
+        return redirect(url_for("admin_panel.companies"))
+
+    success, message = approve_company(company)
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("admin_panel.companies", **request.args))
+
+
+@admin_bp.route("/companies/<int:company_id>/delete", methods=["POST"])
+def delete_company_route(company_id):
+    company = get_company_by_id(company_id)
+    if not company:
+        flash("Không tìm thấy thông tin công ty.", "danger")
+        return redirect(url_for("admin_panel.companies"))
+
+    success, message = delete_company(company)
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("admin_panel.companies", **request.args))

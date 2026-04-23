@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="content-card">
+        <!-- TITLE -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold m-0">Quản lý tin tuyển dụng</h5>
+        </div>
+
+        <!-- FILTER -->
+        <form class="row g-3 mb-4" method="get" action="{{ url_for('admin_panel.posts') }}">
+            <div class="col-md-4">
+                <input
+                    type="text"
+                    class="form-control"
+                    name="keyword"
+                    value="{{ request.args.get('keyword', '') }}"
+                    placeholder="Tìm tiêu đề, mô tả, kỹ năng..."
+                >
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select" name="status">
+                    <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
+                    <option value="ACTIVE" {% if request.args.get('status') == 'ACTIVE' %}selected{% endif %}>Đang hoạt động</option>
+                    <option value="OVERDUE" {% if request.args.get('status') == 'OVERDUE' %}selected{% endif %}>Hết hạn</option>
+                    <option value="CLOSED" {% if request.args.get('status') == 'CLOSED' %}selected{% endif %}>Đã đóng</option>
+                    <option value="PINNED" {% if request.args.get('status') == 'PINNED' %}selected{% endif %}>Đã ghim</option>
+                    <option value="BLOCKED" {% if request.args.get('status') == 'BLOCKED' %}selected{% endif %}>Đã khóa</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select" name="is_reported">
+                    <option value="all" {% if request.args.get('is_reported', 'all') == 'all' %}selected{% endif %}>Tất cả tin</option>
+                    <option value="1" {% if request.args.get('is_reported') == '1' %}selected{% endif %}>Bị báo cáo</option>
+                    <option value="0" {% if request.args.get('is_reported') == '0' %}selected{% endif %}>Không bị báo cáo</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-filter w-100">Lọc</button>
+            </div>
+        </form>
+
+        <!-- TABLE -->
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th width="60">ID</th>
+                    <th>Tiêu đề</th>
+                    <th>Công ty</th>
+                    <th>Ngày tạo</th>
+                    <th>Trạng thái</th>
+                    <th width="250">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for p in posts.items %}
+                <tr {% if p.is_reported %}class="table-danger"{% endif %}>
+                    <td>{{ p.id }}</td>
+                    <td>
+                        <div class="fw-bold">{{ p.title }}</div>
+                        {% if p.is_reported %}
+                            <span class="badge bg-danger">Bị báo cáo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.recruiter and p.recruiter.company %}
+                            {{ p.recruiter.company.name }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        {% if p.status == 'ACTIVE' %}
+                            <span class="badge bg-success">Hoạt động</span>
+                        {% elif p.status == 'BLOCKED' %}
+                            <span class="badge bg-danger">Đã khóa</span>
+                        {% elif p.status == 'OVERDUE' %}
+                            <span class="badge bg-secondary">Hết hạn</span>
+                        {% elif p.status == 'CLOSED' %}
+                            <span class="badge bg-warning text-dark">Đã đóng</span>
+                        {% elif p.status == 'PINNED' %}
+                            <span class="badge bg-primary">Đã ghim</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ACTION -->
+                    <td>
+                        <div class="d-flex gap-2">
+                            <form method="post" action="{{ url_for('admin_panel.change_post_status', post_id=p.id, **request.args) }}" style="margin:0;">
+                                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <option value="ACTIVE" {% if p.status == 'ACTIVE' %}selected{% endif %}>Hoạt động</option>
+                                    <option value="PINNED" {% if p.status == 'PINNED' %}selected{% endif %}>Ghim</option>
+                                    <option value="BLOCKED" {% if p.status == 'BLOCKED' %}selected{% endif %}>Khóa</option>
+                                    <option value="CLOSED" {% if p.status == 'CLOSED' %}selected{% endif %}>Đóng</option>
+                                </select>
+                            </form>
+
+                            <form
+                                method="post"
+                                action="{{ url_for('admin_panel.delete_post_route', post_id=p.id, **request.args) }}"
+                                style="margin:0;"
+                            >
+                                <button class="btn btn-action btn-danger btn-sm"
+                                        onclick="return confirm('Xóa tin tuyển dụng này? Hành động này không thể hoàn tác.')">
+                                    Xóa
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Không tìm thấy tin tuyển dụng phù hợp.
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- PAGINATION -->
+        {% if posts.pages > 1 %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if not posts.has_prev %}disabled{% endif %}">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('admin_panel.posts', page=posts.prev_num, **request.args) if posts.has_prev else '#' }}"
+                    >
+                        Trước
+                    </a>
+                </li>
+                {% for page_num in posts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == posts.page %}active{% endif %}">
+                            <a
+                                class="page-link"
+                                href="{{ url_for('admin_panel.posts', page=page_num, **request.args) }}"
+                            >
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not posts.has_next %}disabled{% endif %}">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('admin_panel.posts', page=posts.next_num, **request.args) if posts.has_next else '#' }}"
+                    >
+                        Sau
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

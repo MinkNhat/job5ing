@@ -65,7 +65,7 @@
                             <strong>{{ stats.pending_companies }} Công ty đang chờ duyệt!</strong>
                             <div class="small">Vui lòng kiểm tra danh sách doanh nghiệp mới đăng ký.</div>
                         </div>
-                        <a href="#" class="btn btn-sm btn-warning ms-3">Xem ngay</a>
+                        <a href="{{ url_for('admin_panel.companies', status='pending') }}" class="btn btn-sm btn-warning ms-3">Xem ngay</a>
                     </div>
                     {% else %}
                     <p class="text-muted mb-0 italic">Hiện không có yêu cầu phê duyệt mới nào.</p>
@@ -82,6 +82,12 @@
                 <div class="list-group list-group-flush">
                     <a href="{{ url_for('admin_panel.accounts') }}" class="list-group-item list-group-item-action py-3 border-0">
                         Quản lý tài khoản
+                    </a>
+                    <a href="{{ url_for('admin_panel.posts') }}" class="list-group-item list-group-item-action py-3 border-0">
+                        Quản lý tin tuyển dụng
+                    </a>
+                    <a href="{{ url_for('admin_panel.companies') }}" class="list-group-item list-group-item-action py-3 border-0">
+                        Quản lý doanh nghiệp
                     </a>
                     <a href="{{ url_for('admin_panel.profile') }}" class="list-group-item list-group-item-action py-3 border-0">
                         Hồ sơ cá nhân

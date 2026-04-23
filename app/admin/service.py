@@ -2,7 +2,8 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.models import User, Company, Post, Application
+from app.models import User, Company, Post, Application, Notification
+from services.smtp_service import send_approval_email
 
 def get_dashboard_stats():
     total_users = User.query.count()
@@ -159,3 +160,114 @@ def delete_user(user):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể xóa tài khoản. Tài khoản có thể đang liên kết với dữ liệu khác."
+
+
+def get_posts(page=1, keyword=None, status=None, is_reported=None):
+    query = Post.query
+
+    if keyword:
+        keyword_filter = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                Post.title.ilike(keyword_filter),
+                Post.description.ilike(keyword_filter),
+                Post.skills.ilike(keyword_filter)
+            )
+        )
+
+    if status and status != "all":
+        query = query.filter(Post.status == status)
+
+    if is_reported is not None:
+        query = query.filter(Post.is_reported == is_reported)
+
+    return query.order_by(Post.created_at.desc()).paginate(page=page, per_page=10)
+
+
+def get_post_by_id(post_id):
+    return db.session.get(Post, post_id)
+
+
+def update_post_status(post, new_status):
+    if new_status not in ['ACTIVE', 'OVERDUE', 'CLOSED', 'PINNED', 'BLOCKED']:
+        return False, "Trạng thái không hợp lệ."
+
+    post.status = new_status
+    try:
+        db.session.commit()
+        return True, f"Đã cập nhật trạng thái tin tuyển dụng thành {new_status}."
+    except SQLAlchemyError:
+        db.session.rollback()
+        return False, "Không thể cập nhật trạng thái tin tuyển dụng."
+
+
+def delete_post(post):
+    try:
+        db.session.delete(post)
+        db.session.commit()
+        return True, "Đã xóa tin tuyển dụng thành công."
+    except SQLAlchemyError:
+        db.session.rollback()
+        return False, "Không thể xóa tin tuyển dụng."
+
+
+def get_companies(page=1, keyword=None, status=None):
+    query = Company.query
+
+    if keyword:
+        keyword_filter = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                Company.name.ilike(keyword_filter),
+                Company.tax_code.ilike(keyword_filter),
+                Company.location.ilike(keyword_filter)
+            )
+        )
+
+    if status == "approved":
+        query = query.filter(Company.is_approved.is_(True))
+    elif status == "pending":
+        query = query.filter(Company.is_approved.is_(False))
+
+    return query.order_by(Company.id.desc()).paginate(page=page, per_page=10)
+
+
+def get_company_by_id(company_id):
+    return db.session.get(Company, company_id)
+
+
+def approve_company(company):
+    if company.is_approved:
+        return False, "Công ty này đã được duyệt trước đó."
+
+    company.is_approved = True
+    
+    # Tạo thông báo cho các recruiter của công ty
+    for recruiter in company.recruiters:
+        notification = Notification(
+            user_id=recruiter.user_id,
+            content=f"Công ty {company.name} của bạn đã được phê duyệt.",
+            type='ACCOUNT_APPROVED'
+        )
+        db.session.add(notification)
+        
+        # Gửi email thông báo
+        if recruiter.user and recruiter.user.email:
+            send_approval_email(recruiter.user.email, company.name)
+
+    try:
+        db.session.commit()
+        return True, f"Đã phê duyệt công ty {company.name} và gửi thông báo."
+    except SQLAlchemyError:
+        db.session.rollback()
+        return False, "Không thể phê duyệt công ty. Vui lòng thử lại."
+
+
+def delete_company(company):
+    try:
+        db.session.delete(company)
+        db.session.commit()
+        return True, "Đã xóa thông tin công ty."
+    except SQLAlchemyError:
+        db.session.rollback()
+        return False, "Không thể xóa công ty do có dữ liệu liên quan."

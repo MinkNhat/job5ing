@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="content-card">
+        <!-- TITLE -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold m-0">Quản lý doanh nghiệp</h5>
+        </div>
+
+        <!-- FILTER -->
+        <form class="row g-3 mb-4" method="get" action="{{ url_for('admin_panel.companies') }}">
+            <div class="col-md-6">
+                <input
+                    type="text"
+                    class="form-control"
+                    name="keyword"
+                    value="{{ request.args.get('keyword', '') }}"
+                    placeholder="Tìm tên công ty, mã số thuế..."
+                >
+            </div>
+
+            <div class="col-md-4">
+                <select class="form-select" name="status">
+                    <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
+                    <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Đang chờ duyệt</option>
+                    <option value="approved" {% if request.args.get('status') == 'approved' %}selected{% endif %}>Đã phê duyệt</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-filter w-100">Lọc</button>
+            </div>
+        </form>
+
+        <!-- TABLE -->
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th width="60">ID</th>
+                    <th>Tên công ty</th>
+                    <th>Địa điểm</th>
+                    <th>Mã số thuế</th>
+                    <th>Trạng thái</th>
+                    <th width="200">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for c in companies.items %}
+                <tr>
+                    <td>{{ c.id }}</td>
+                    <td>
+                        <div class="fw-bold">{{ c.name }}</div>
+                        <small class="text-muted">{{ c.website or '' }}</small>
+                    </td>
+                    <td>{{ c.location or 'N/A' }}</td>
+                    <td>{{ c.tax_code or 'N/A' }}</td>
+                    <td>
+                        {% if c.is_approved %}
+                            <span class="badge bg-success">Đã duyệt</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ACTION -->
+                    <td>
+                        <div class="d-flex gap-2">
+                            {% if not c.is_approved %}
+                            <form method="post" action="{{ url_for('admin_panel.approve_company_route', company_id=c.id, **request.args) }}" style="margin:0;">
+                                <button class="btn btn-sm btn-success">Duyệt</button>
+                            </form>
+                            {% endif %}
+
+                            <form
+                                method="post"
+                                action="{{ url_for('admin_panel.delete_company_route', company_id=c.id, **request.args) }}"
+                                style="margin:0;"
+                            >
+                                <button class="btn btn-action btn-danger btn-sm"
+                                        onclick="return confirm('Xóa doanh nghiệp này? Hành động này không thể hoàn tác.')">
+                                    Xóa
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Không tìm thấy doanh nghiệp phù hợp.
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- PAGINATION -->
+        {% if companies.pages > 1 %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if not companies.has_prev %}disabled{% endif %}">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('admin_panel.companies', page=companies.prev_num, **request.args) if companies.has_prev else '#' }}"
+                    >
+                        Trước
+                    </a>
+                </li>
+                {% for page_num in companies.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == companies.page %}active{% endif %}">
+                            <a
+                                class="page-link"
+                                href="{{ url_for('admin_panel.companies', page=page_num, **request.args) }}"
+                            >
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not companies.has_next %}disabled{% endif %}">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('admin_panel.companies', page=companies.next_num, **request.args) if companies.has_next else '#' }}"
+                    >
+                        Sau
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
