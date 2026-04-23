@@ -49,9 +49,11 @@ def register():
 @main_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        success, message = login_with_password(request.form)
+        success, message, user = login_with_password(request.form)
         flash(message, "success" if success else "danger")
         if success:
+            if user.is_admin:
+                return redirect(url_for("admin_panel.index"))
             return redirect(url_for("main.index"))
 
     return render_template(
@@ -123,9 +125,13 @@ def google_callback():
     try:
         token_data = fetch_google_tokens(code)
         profile = fetch_google_userinfo(token_data["access_token"])
-        success, message = login_with_google_profile(profile)
+        success, message, user = login_with_google_profile(profile)
         flash(message, "success" if success else "danger")
-        return redirect(url_for("main.index" if success else "main.login"))
+        if success:
+            if user.is_admin:
+                return redirect(url_for("admin_panel.index"))
+            return redirect(url_for("main.index"))
+        return redirect(url_for("main.login"))
     except (HTTPError, URLError, KeyError, SQLAlchemyError, json.JSONDecodeError):
         from app import db
 

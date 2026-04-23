@@ -22,6 +22,14 @@ from .service import (
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/admin")
 
 
+@admin_bp.before_request
+def restrict_to_admin():
+    admin = get_current_admin()
+    if not admin:
+        flash("Bạn không có quyền truy cập vào khu vực này.", "danger")
+        return redirect(url_for("main.login"))
+
+
 @admin_bp.app_context_processor
 def inject_admin_context():
     return {"current_admin": get_current_admin()}

@@ -206,24 +206,24 @@ def login_with_password(form_data):
     ]
     is_valid, error_message = validate_required_fields(form_data, required_fields)
     if not is_valid:
-        return False, error_message
+        return False, error_message, None
 
     email = (form_data.get("email") or "").strip().lower()
     password = form_data.get("password") or ""
 
     is_valid, error_message = validate_email(email)
     if not is_valid:
-        return False, error_message
+        return False, error_message, None
 
     user = User.query.filter_by(email=email).first()
     if not user or not check_password_hash(user.password, password):
-        return False, "Email hoặc mật khẩu không chính xác."
+        return False, "Email hoặc mật khẩu không chính xác.", None
 
     if not user.is_active:
-        return False, "Tài khoản của bạn đang bị khóa."
+        return False, "Tài khoản của bạn đang bị khóa.", None
 
     finalize_login(user)
-    return True, "Đăng nhập thành công."
+    return True, "Đăng nhập thành công.", user
 
 
 def finalize_login(user):
@@ -286,10 +286,10 @@ def fetch_google_userinfo(access_token):
 def login_with_google_profile(profile):
     email = (profile.get("email") or "").strip().lower()
     if not email:
-        return False, "Google không trả về email cho tài khoản này."
+        return False, "Google không trả về email cho tài khoản này.", None
 
     if not profile.get("email_verified", False):
-        return False, "Email Google chưa được xác minh."
+        return False, "Email Google chưa được xác minh.", None
 
     user = User.query.filter_by(email=email).first()
     if not user:
@@ -309,11 +309,11 @@ def login_with_google_profile(profile):
 
     if not user.is_active:
         db.session.rollback()
-        return False, "Tài khoản của bạn đang bị khóa."
+        return False, "Tài khoản của bạn đang bị khóa.", None
 
     if profile.get("picture"):
         user.avatar_url = profile.get("picture")
 
     finalize_login(user)
-    return True, "Đăng nhập Google thành công."
+    return True, "Đăng nhập Google thành công.", user
 

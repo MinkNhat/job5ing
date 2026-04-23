@@ -63,8 +63,16 @@ def get_user_by_id(user_id):
     return db.session.get(User, user_id)
 
 
+from flask import session
+
 def get_current_admin():
-    return User.query.filter(User.is_admin.is_(True)).order_by(User.id.asc()).first()
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    user = db.session.get(User, user_id)
+    if user and user.is_admin:
+        return user
+    return None
 
 
 def update_user(user, form_data):
