@@ -5,56 +5,44 @@
 {% block content %}
 <section class="hero-section">
     <div class="container">
-        <div class="hero-banner">
-            <div class="hero-copy">
-                <span class="hero-eyebrow">Nền tảng việc làm cho sinh viên và người mới bắt đầu</span>
-                <h1>Tìm kiếm việc làm mơ ước</h1>
-                <p>Khám phá các cơ hội việc làm hấp dẫn, tạo CV nhanh và ứng tuyển trong một giao diện thân thiện, rõ ràng và dễ dùng.</p>
-            </div>
-
-            <div class="hero-visual">
-                <div class="hero-banner-art">
-                    <img src="{{ url_for('static', filename='images/Banner.png') }}" alt="Banner Job5ing">
-                </div>
-            </div>
+        <div class="hero-banner-image">
+            <img src="{{ url_for('static', filename='images/Banner.png') }}" alt="Job5ing Banner">
         </div>
 
         <form class="search-panel" method="get" action="{{ url_for('main.index') }}">
             <input type="text" name="keyword" placeholder="Tìm kiếm việc làm, công ty..." value="{{ request.args.get('keyword', '') }}">
+
             <select name="location">
                 {% for location in locations %}
-                <option value="{{ location }}" {% if request.args.get('location', locations[0]) == location %}selected{% endif %}>Địa điểm: {{ location }}</option>
+                <option value="{{ location }}" {% if request.args.get('location', locations[0]) == location %}selected{% endif %}>{{ location }}</option>
                 {% endfor %}
             </select>
+
             <button type="submit">Tìm kiếm</button>
         </form>
 
-        <div class="search-tools">
-            <button type="button" class="tool-chip">Bộ lọc</button>
-            <button type="button" class="tool-chip wide">Sắp xếp theo: Phù hợp nhất</button>
+        <div class="search-tools-row">
+            <button type="button" class="filter-btn">
+                Bộ lọc <i class="fas fa-filter"></i>
+            </button>
+            <button type="button" class="sort-dropdown">
+                Sắp xếp theo: Phù hợp nhất <i class="fas fa-chevron-down"></i>
+            </button>
         </div>
     </div>
 </section>
 
 <section class="jobs-section" id="jobs">
     <div class="container">
-        <div class="section-heading">
-            <div>
-                <span class="section-kicker">Cơ hội nổi bật</span>
-                <h2>Công việc để bắt đầu hành trình sự nghiệp</h2>
-            </div>
-            <a href="{{ url_for('main.register') }}" class="section-link">Tạo tài khoản ngay</a>
-        </div>
-
         <div class="job-grid">
             {% for job in featured_jobs %}
             <article class="job-card">
                 <div class="job-card-logo">
-                    <img src="{{ url_for('static', filename='images/brand/logo.png') }}" alt="Job5ing logo">
+                    <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
                 </div>
                 <div class="job-card-body">
                     <h3>{{ job.title }}</h3>
-                    <p>{{ job.company }}</p>
+                    <p class="company-name">{{ job.company }}</p>
                     <div class="job-card-tags">
                         <span>{{ job.salary }}</span>
                         <span>{{ job.experience }}</span>
@@ -65,17 +53,4 @@
         </div>
     </div>
 </section>
-
-<section class="cta-section" id="cv">
-    <div class="container">
-        <div class="cta-card">
-            <div>
-                <span class="section-kicker">Bắt đầu trong ít phút</span>
-                <h2>Tạo tài khoản để lưu CV, quản lý ứng tuyển và theo dõi cơ hội mới</h2>
-            </div>
-            <a href="{{ url_for('main.register') }}" class="site-action-btn primary">Đăng ký miễn phí</a>
-        </div>
-    </div>
-</section>
 {% endblock %}
-

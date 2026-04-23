@@ -79,6 +79,9 @@ class Recruiter(db.Model):
 
     position = db.Column(db.String(100))
 
+    is_approved = db.Column(db.Boolean, default=False)
+    is_company_admin = db.Column(db.Boolean, default=False)
+
     posts = db.relationship('Post', backref='recruiter', lazy=True)
 
 

@@ -1,0 +1,34 @@
+<footer class="site-footer" id="contact">
+    <div class="container site-footer-inner">
+        <div class="footer-col brand-info">
+            <a href="/" class="footer-logo">
+                <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job5ing logo">
+            </a>
+            <p class="footer-tagline">Kết nối nhân tài với cơ hội nghề nghiệp lý tưởng.</p>
+        </div>
+
+        <div class="footer-col">
+            <h4 class="footer-heading">Khám phá</h4>
+            <ul class="footer-links">
+                <li><a href="{{ url_for('main.index') }}#jobs">Việc làm mới</a></li>
+                <li><a href="{{ url_for('main.index') }}#cv">Tạo CV online</a></li>
+                <li><a href="{{ url_for('main.register') }}">Đăng ký ứng viên</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4 class="footer-heading">Liên hệ</h4>
+            <ul class="footer-contact">
+                <li><i class="fas fa-envelope"></i> contact@job5ing.com</li>
+                <li><i class="fas fa-phone"></i> +84 123 456 789</li>
+                <li><i class="fas fa-map-marker-alt"></i> TP. Hồ Chí Minh</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer-copyright">
+        <div class="container">
+            <p>&copy; 2026 Job5ing. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
