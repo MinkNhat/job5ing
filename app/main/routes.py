@@ -27,6 +27,10 @@ from app import db
 
 main_bp = Blueprint("main", __name__)
 
+@main_bp.app_context_processor
+def provide_public_context():
+    return inject_public_auth_context()
+
 @main_bp.route("/")
 def index():
     page = request.args.get("page", 1, type=int)
@@ -268,7 +272,7 @@ def account():
         return redirect(url_for("main.login"))
 
     if request.method == "POST":
-        success, message = update_account_profile(user, request.form)
+        success, message = update_account_profile(user, request.form, request.files)
         flash(message, "success" if success else "danger")
         return redirect(url_for("main.account"))
 

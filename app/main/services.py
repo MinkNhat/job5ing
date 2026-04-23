@@ -10,6 +10,8 @@ from flask import current_app, flash, session, url_for
 from itsdangerous import URLSafeTimedSerializer
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
+import cloudinary.uploader
 
 from app import db
 from app.models import User
@@ -104,7 +106,7 @@ def parse_date_input(raw_value):
         return False, None, "Ngày sinh không đúng định dạng."
 
 
-def update_account_profile(user, form_data):
+def update_account_profile(user, form_data, files=None):
     required_fields = [
         ("first_name", "tên"),
         ("last_name", "họ"),
@@ -124,6 +126,22 @@ def update_account_profile(user, form_data):
     is_valid, date_of_birth, error_message = parse_date_input(form_data.get("date_of_birth"))
     if not is_valid:
         return False, error_message
+
+    # Handle avatar upload
+    if files and "avatar" in files:
+        avatar_file = files["avatar"]
+        if avatar_file and avatar_file.filename:
+            try:
+                result = cloudinary.uploader.upload(
+                    avatar_file,
+                    folder="job5ing/avatars",
+                    resource_type="auto",
+                    overwrite=True,
+                    unique_filename=False
+                )
+                avatar_url = result.get("secure_url")
+            except Exception as e:
+                return False, f"Không thể upload ảnh lên. Vui lòng thử lại. ({str(e)})"
 
     user.first_name = (form_data.get("first_name") or "").strip() or None
     user.last_name = (form_data.get("last_name") or "").strip() or None
