@@ -11,92 +11,137 @@
 {% endblock %}
 
 {% block content %}
-<section class="account-section">
-    <div class="container">
-        <div class="account-shell">
-            <aside class="account-summary">
-                <div class="account-avatar">
-                    {% if user.avatar_url %}
-                    <img src="{{ user.avatar_url }}" alt="Avatar">
-                    {% else %}
-                    {{ ((user.first_name or user.email or 'J')[:1]).upper() }}
-                    {% endif %}
-                </div>
-                <h1>{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or user.email }}</h1>
-                <p>{{ user.email }}</p>
-                <span class="account-role-pill">{{ 'Nhà tuyển dụng' if user.is_employer else 'Ứng viên' }}</span>
+<div class="container">
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="fw-bold m-0">Hồ sơ cá nhân</h5>
+            </div>
+        </div>
 
-                <div class="account-summary-meta">
-                    <span>{{ 'Đang hoạt động' if user.is_active else 'Tạm khóa' }}</span>
-                    <span>{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'Chưa có lần đăng nhập' }}</span>
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="profile-summary-card">
+                    <div class="profile-avatar">
+                        {% if user.avatar_url %}
+                            <img src="{{ user.avatar_url }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            {{ ((user.first_name or user.email or 'J')[:1]).upper() }}
+                        {% endif %}
+                    </div>
+                    <h6 class="fw-bold mb-1">{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or 'Ứng viên' }}</h6>
+                    <p class="text-muted small mb-3">{{ user.email }}</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <span class="badge-role-blue">{{ 'Nhà tuyển dụng' if user.is_employer else 'Ứng viên' }}</span>
+                        {% if user.is_active %}
+                            <span class="badge-status-active">Hoạt động</span>
+                        {% else %}
+                            <span class="badge-status-inactive">Tạm khóa</span>
+                        {% endif %}
+                    </div>
                 </div>
-            </aside>
+            </div>
 
-            <div class="account-details">
-                <div class="account-card">
-                    <div class="account-card-heading">
-                        <div>
-                            <h2>Thông tin tài khoản</h2>
-                            <p>Cập nhật hồ sơ để navbar và phiên đăng nhập luôn hiển thị đúng tài khoản hiện tại của bạn.</p>
-                        </div>
+            <div class="col-lg-8">
+                <form method="post" class="row g-3" enctype="multipart/form-data">
+                    <div class="col-md-6">
+                        <label for="last_name" class="form-label">Họ</label>
+                        <input
+                            type="text"
+                            id="last_name"
+                            name="last_name"
+                            class="form-control"
+                            value="{{ request.form.get('last_name', user.last_name or '') }}"
+                            required
+                        >
                     </div>
 
-                    <form method="post" class="account-form" enctype="multipart/form-data">
-                        <div class="account-grid">
-                            <div class="account-field">
-                                <label for="last_name">Họ</label>
-                                <input id="last_name" name="last_name" type="text" value="{{ user.last_name or '' }}" placeholder="Nguyễn" required>
-                            </div>
+                    <div class="col-md-6">
+                        <label for="first_name" class="form-label">Tên</label>
+                        <input
+                            type="text"
+                            id="first_name"
+                            name="first_name"
+                            class="form-control"
+                            value="{{ request.form.get('first_name', user.first_name or '') }}"
+                            required
+                        >
+                    </div>
 
-                            <div class="account-field">
-                                <label for="first_name">Tên</label>
-                                <input id="first_name" name="first_name" type="text" value="{{ user.first_name or '' }}" placeholder="Văn A" required>
-                            </div>
+                    <div class="col-12">
+                        <label for="email" class="form-label">Email</label>
+                        <input
+                            type="email"
+                            id="email"
+                            class="form-control"
+                            value="{{ user.email }}"
+                            disabled
+                        >
+                    </div>
 
-                            <div class="account-field">
-                                <label for="email">Email</label>
-                                <input id="email" type="email" value="{{ user.email }}" disabled>
-                            </div>
+                    <div class="col-md-6">
+                        <label for="phone" class="form-label">Số điện thoại</label>
+                        <input
+                            type="text"
+                            id="phone"
+                            name="phone"
+                            class="form-control"
+                            value="{{ request.form.get('phone', user.phone or '') }}"
+                        >
+                    </div>
+                    <divc class="col-md-6"></divc>
 
-                            <div class="account-field">
-                                <label for="phone">Số điện thoại</label>
-                                <input id="phone" name="phone" type="text" value="{{ user.phone or '' }}" placeholder="09xxxxxxxx">
-                            </div>
+                    <div class="col-md-6">
+                        <label for="sex" class="form-label">Giới tính</label>
+                        {% set selected_sex = request.form.get('sex', user.sex or '') %}
+                        <select id="sex" name="sex" class="form-select">
+                            <option value="">Chọn giới tính</option>
+                            <option value="Nam" {% if selected_sex == 'Nam' %}selected{% endif %}>Nam</option>
+                            <option value="Nữ" {% if selected_sex == 'Nữ' %}selected{% endif %}>Nữ</option>
+                            <option value="Khác" {% if selected_sex == 'Khác' %}selected{% endif %}>Khác</option>
+                        </select>
+                    </div>
 
-                            <div class="account-field">
-                                <label for="sex">Giới tính</label>
-                                <select id="sex" name="sex">
-                                    <option value="">Chọn giới tính</option>
-                                    <option value="Nam" {% if user.sex == 'Nam' %}selected{% endif %}>Nam</option>
-                                    <option value="Nữ" {% if user.sex == 'Nữ' %}selected{% endif %}>Nữ</option>
-                                    <option value="Khác" {% if user.sex == 'Khác' %}selected{% endif %}>Khác</option>
-                                </select>
-                            </div>
+                    <div class="col-md-6">
+                        <label for="date_of_birth" class="form-label">Ngày sinh</label>
+                        <input
+                            type="date"
+                            id="date_of_birth"
+                            name="date_of_birth"
+                            class="form-control"
+                            value="{{ user.date_of_birth.isoformat() if user.date_of_birth else '' }}"
+                        >
+                    </div>
 
-                            <div class="account-field">
-                                <label for="date_of_birth">Ngày sinh</label>
-                                <input id="date_of_birth" name="date_of_birth" type="date" value="{{ user.date_of_birth.isoformat() if user.date_of_birth else '' }}">
-                            </div>
+                    <div class="col-12">
+                        <label for="address" class="form-label">Địa chỉ</label>
+                        <textarea
+                            id="address"
+                            name="address"
+                            class="form-control"
+                            rows="3"
+                            placeholder="Thêm địa chỉ liên hệ"
+                        >{{ request.form.get('address', user.address or '') }}</textarea>
+                    </div>
 
-                            <div class="account-field account-field-full">
-                                <label for="address">Địa chỉ</label>
-                                <textarea id="address" name="address" rows="3" placeholder="Thêm địa chỉ liên hệ">{{ user.address or '' }}</textarea>
-                            </div>
+                    <div class="col-12">
+                        <label for="avatar" class="form-label">Ảnh đại diện</label>
+                        <input
+                            type="file"
+                            id="avatar"
+                            name="avatar"
+                            class="form-control"
+                            accept="image/*"
+                        >
+                    </div>
 
-                            <div class="account-field account-field-full">
-                                <label for="avatar_url">Link avatar</label>
-                                <input id="avatar_url" name="avatar_url" type="url" value="{{ user.avatar_url or '' }}" placeholder="https://example.com/avatar.jpg">
-                            </div>
-                        </div>
-
-                        <div class="account-actions">
-                            <button type="submit" class="site-search-button">Lưu hồ sơ</button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-filter">Lưu hồ sơ</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</section>
+</div>
 {% endblock %}
 

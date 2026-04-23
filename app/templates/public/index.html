@@ -13,8 +13,23 @@
             <input type="text" name="keyword" placeholder="Tìm kiếm việc làm, công ty..." value="{{ request.args.get('keyword', '') }}">
 
             <select name="location">
-                {% for location in locations %}
-                <option value="{{ location }}" {% if request.args.get('location', locations[0]) == location %}selected{% endif %}>{{ location }}</option>
+                <option value="">Tất cả địa điểm</option>
+                {% for loc in locations %}
+                <option value="{{ loc }}" {% if request.args.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="experience">
+                <option value="">Kinh nghiệm</option>
+                {% for exp in experience_options %}
+                <option value="{{ exp }}" {% if request.args.get('experience') == exp %}selected{% endif %}>{{ exp }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="salary">
+                <option value="">Mức lương</option>
+                {% for sal in salary_options %}
+                <option value="{{ sal }}" {% if request.args.get('salary') == sal %}selected{% endif %}>{{ sal }}</option>
                 {% endfor %}
             </select>
 
@@ -22,12 +37,21 @@
         </form>
 
         <div class="search-tools-row">
-            <button type="button" class="filter-btn">
-                Bộ lọc <i class="fas fa-filter"></i>
-            </button>
-            <button type="button" class="sort-dropdown">
-                Sắp xếp theo: Phù hợp nhất <i class="fas fa-chevron-down"></i>
-            </button>
+            {% if request.args.get('keyword') or request.args.get('location') or request.args.get('experience') or request.args.get('salary') %}
+            <a href="{{ url_for('main.index') }}" class="reset-filter-btn">
+                Xóa bộ lọc <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+            
+            <div class="sort-container">
+                <label for="sort_by">Sắp xếp theo:</label>
+                <select name="sort_by" onchange="window.location.href=this.value" class="sort-select">
+                    <option value="{{ url_for('main.index', sort_by='relevance', keyword=request.args.get('keyword'), location=request.args.get('location'), experience=request.args.get('experience'), salary=request.args.get('salary')) }}" {% if request.args.get('sort_by') == 'relevance' or not request.args.get('sort_by') %}selected{% endif %}>Phù hợp nhất</option>
+                    <option value="{{ url_for('main.index', sort_by='newest', keyword=request.args.get('keyword'), location=request.args.get('location'), experience=request.args.get('experience'), salary=request.args.get('salary')) }}" {% if request.args.get('sort_by') == 'newest' %}selected{% endif %}>Mới nhất</option>
+                    <option value="{{ url_for('main.index', sort_by='salary_desc', keyword=request.args.get('keyword'), location=request.args.get('location'), experience=request.args.get('experience'), salary=request.args.get('salary')) }}" {% if request.args.get('sort_by') == 'salary_desc' %}selected{% endif %}>Lương cao nhất</option>
+                    <option value="{{ url_for('main.index', sort_by='experience_desc', keyword=request.args.get('keyword'), location=request.args.get('location'), experience=request.args.get('experience'), salary=request.args.get('salary')) }}" {% if request.args.get('sort_by') == 'experience_desc' %}selected{% endif %}>Yêu cầu kinh nghiệm</option>
+                </select>
+            </div>
         </div>
     </div>
 </section>
@@ -35,22 +59,63 @@
 <section class="jobs-section" id="jobs">
     <div class="container">
         <div class="job-grid">
-            {% for job in featured_jobs %}
+            {% for job in pagination.items %}
             <article class="job-card">
+                {% if job.deadline %}
+                <div class="job-card-deadline" title="Hạn nộp hồ sơ">
+                    <i class="far fa-clock"></i> {{ job.deadline.strftime('%d/%m/%Y') }}
+                </div>
+                {% endif %}
                 <div class="job-card-logo">
-                    <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
+                    {% if job.recruiter.company.avatar_url %}
+                        <img src="{{ job.recruiter.company.avatar_url }}" alt="{{ job.recruiter.company.name }}">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
+                    {% endif %}
                 </div>
                 <div class="job-card-body">
                     <h3>{{ job.title }}</h3>
-                    <p class="company-name">{{ job.company }}</p>
+                    <p class="company-name">{{ job.recruiter.company.name }}</p>
                     <div class="job-card-tags">
-                        <span>{{ job.salary }}</span>
-                        <span>{{ job.experience }}</span>
+                        <span>{{ job.salary_range or 'Thỏa thuận' }}</span>
+                        <span>{{ job.experience or 'Không yêu cầu kinh nghiệm' }}</span>
                     </div>
                 </div>
             </article>
+            {% else %}
+            <div class="no-jobs">
+                <p>Không tìm thấy việc làm nào phù hợp.</p>
+            </div>
             {% endfor %}
         </div>
+
+        {% if pagination.pages > 1 %}
+        <nav class="pagination-container">
+            <ul class="pagination">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.index', page=pagination.prev_num, keyword=request.args.get('keyword'), location=request.args.get('location'), experience=request.args.get('experience'), salary=request.args.get('salary'), sort_by=request.args.get('sort_by')) if pagination.has_prev else '#' }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('main.index', page=page_num, keyword=request.args.get('keyword'), location=request.args.get('location'), experience=request.args.get('experience'), salary=request.args.get('salary'), sort_by=request.args.get('sort_by')) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.index', page=pagination.next_num, keyword=request.args.get('keyword'), location=request.args.get('location'), experience=request.args.get('experience'), salary=request.args.get('salary'), sort_by=request.args.get('sort_by')) if pagination.has_next else '#' }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

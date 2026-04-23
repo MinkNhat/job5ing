@@ -61,6 +61,20 @@ def validate_phone(phone):
     return True, None
 
 
+def validate_tax_code(tax_code):
+    if not tax_code:
+        return False, "Mã số thuế không được để trống."
+
+    mst = tax_code.strip().replace("-", "")
+    if not (len(mst) == 10 or len(mst) == 13):
+        return False, "Mã số thuế phải có 10 hoặc 13 chữ số."
+
+    if not mst.isdigit():
+        return False, "Mã số thuế chỉ được chứa các chữ số."
+
+    return True, None
+
+
 def validate_password_strength(password):
     if not PASSWORD_STRENGTH_PATTERN.match(password or ""):
         return (
@@ -102,7 +116,7 @@ def update_account_profile(user, form_data, files=None):
         return False, error_message
 
     phone = (form_data.get("phone") or "").strip()
-    avatar_url = user.avatar_url
+    avatar_url = (form_data.get("avatar_url") or "").strip()
 
     if phone:
         is_valid, error_message = validate_phone(phone)
@@ -134,7 +148,7 @@ def update_account_profile(user, form_data, files=None):
     user.phone = phone or None
     user.address = (form_data.get("address") or "").strip() or None
     user.sex = (form_data.get("sex") or "").strip() or None
-    user.avatar_url = avatar_url
+    user.avatar_url = avatar_url or None
     user.date_of_birth = date_of_birth
 
     try:
@@ -162,7 +176,6 @@ def create_account(form_data):
     first_name = (form_data.get("first_name") or "").strip() or None
     last_name = (form_data.get("last_name") or "").strip() or None
     phone = (form_data.get("phone") or "").strip() or None
-    role = "employer" if form_data.get("is_employer") == "on" else "candidate"
 
     is_valid, error_message = validate_email(email)
     if not is_valid:
@@ -186,14 +199,15 @@ def create_account(form_data):
         phone=phone,
         is_active=True,
         is_admin=False,
-        is_employer=role == "employer",
+        is_employer=False, # Wait for company confirmation
         created_at=datetime.utcnow(),
     )
 
     try:
         db.session.add(user)
         db.session.commit()
-        return True, "Đăng ký tài khoản thành công. Bạn có thể đăng nhập bằng email hoặc Google nếu dùng cùng email này."
+        finalize_login(user)
+        return True, "Đăng ký tài khoản thành công."
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể tạo tài khoản lúc này. Vui lòng thử lại."
