@@ -199,7 +199,7 @@ def create_account(form_data):
         phone=phone,
         is_active=True,
         is_admin=False,
-        is_employer=False,  # Wait for company confirmation
+        is_employer=False, # Wait for company confirmation
         created_at=datetime.utcnow(),
     )
 
@@ -312,8 +312,7 @@ def login_with_google_profile(profile):
             email=email,
             password=generate_password_hash(secrets.token_urlsafe(24)),
             first_name=(profile.get("given_name") or (full_name[-1] if full_name else "")).strip() or None,
-            last_name=(profile.get("family_name") or (
-                " ".join(full_name[:-1]) if len(full_name) > 1 else "")).strip() or None,
+            last_name=(profile.get("family_name") or (" ".join(full_name[:-1]) if len(full_name) > 1 else "")).strip() or None,
             avatar_url=(profile.get("picture") or "").strip() or None,
             is_active=True,
             is_admin=False,
@@ -331,3 +330,4 @@ def login_with_google_profile(profile):
 
     finalize_login(user)
     return True, "Đăng nhập Google thành công."
+
