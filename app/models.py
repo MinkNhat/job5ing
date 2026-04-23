@@ -13,7 +13,7 @@ class Company(db.Model):
     website = db.Column(db.String(255))
     establish_date = db.Column(db.Date)
     scale = db.Column(db.String(50))
-    tax_code = db.Column(db.String(50), unique=True)
+    tax_code = db.Column(db.String(15), unique=True)
     description = db.Column(db.Text)
     is_approved = db.Column(db.Boolean, default=False)
     avatar_url = db.Column(db.String(255))

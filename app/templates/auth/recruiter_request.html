@@ -62,7 +62,8 @@
                     
                     <div class="form-group">
                         <label>Mã số thuế <span class="text-danger">*</span></label>
-                        <input type="text" name="taxCode" class="form-control" placeholder="Mã số thuế doanh nghiệp" required>
+                        <input type="text" name="taxCode" id="taxCodeInput" class="form-control" placeholder="Mã số thuế doanh nghiệp" required>
+                        <div id="taxCodeError" style="color: #ef4437; font-size: 0.8rem; margin-top: 5px; display: none;"></div>
                     </div>
                 </div>
 
@@ -71,9 +72,20 @@
                     <input type="text" name="position" class="form-control" placeholder="VD: Giám đốc điều hành" required>
                 </div>
 
-                <div class="form-group">
-                    <label>Địa chỉ trụ sở chính</label>
-                    <input type="text" name="location" class="form-control" placeholder="Số nhà, đường, quận/huyện, tỉnh/thành phố">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Tỉnh/Thành phố <span class="text-danger">*</span></label>
+                        <select name="city" class="form-control" required>
+                            <option value="" disabled selected>Chọn tỉnh/thành phố</option>
+                            {% for loc in locations %}
+                                <option value="{{ loc }}">{{ loc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Địa chỉ chi tiết</label>
+                        <input type="text" name="address" class="form-control" placeholder="Số nhà, tên đường, phường/xã...">
+                    </div>
                 </div>
 
                 <div class="form-grid-2">
@@ -124,6 +136,65 @@
         const openBtn = document.getElementById("openModalBtn");
         const closeBtn = document.getElementById("closeModalBtn");
         const cancelBtn = document.getElementById("cancelModalBtn");
+        
+        const taxInput = document.getElementById("taxCodeInput");
+        const taxError = document.getElementById("taxCodeError");
+        const submitBtn = document.querySelector('button[form="newCompanyForm"]');
+
+        function validateVNMST(mst) {
+            mst = mst.trim().replace(/-/g, "");
+            if (!mst) return { valid: false, msg: "" };
+            if (!/^\d{10}$|^\d{13}$/.test(mst)) {
+                return { valid: false, msg: "Mã số thuế phải có 10 hoặc 13 chữ số." };
+            }
+
+            const weights = [31, 29, 23, 19, 17, 13, 7, 5, 3];
+            let sum = 0;
+            for (let i = 0; i < 9; i++) {
+                sum += parseInt(mst[i]) * weights[i];
+            }
+
+            const remainder = sum % 11;
+            const checkDigit = 10 - remainder;
+
+            if (checkDigit !== parseInt(mst[9])) {
+                return { valid: false, msg: "Mã số thuế không hợp lệ (sai số kiểm tra)." };
+            }
+
+            return { valid: true, msg: "" };
+        }
+
+        taxInput.addEventListener("input", function() {
+            const result = validateVNMST(this.value);
+            if (this.value.trim() === "") {
+                taxError.style.display = "none";
+                this.style.borderColor = "rgba(28, 48, 78, 0.14)";
+                submitBtn.disabled = false;
+            } else if (!result.valid) {
+                taxError.textContent = result.msg;
+                taxError.style.display = "block";
+                this.style.borderColor = "#ef4437";
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = "0.6";
+            } else {
+                taxError.style.display = "none";
+                this.style.borderColor = "#10b981";
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = "1";
+            }
+        });
+
+        // Chặn submit form nếu MST không hợp lệ
+        const companyForm = document.getElementById("newCompanyForm");
+        companyForm.addEventListener("submit", function(e) {
+            const result = validateVNMST(taxInput.value);
+            if (!result.valid) {
+                e.preventDefault();
+                taxError.textContent = result.msg || "Vui lòng nhập mã số thuế hợp lệ trước khi gửi.";
+                taxError.style.display = "block";
+                taxInput.focus();
+            }
+        });
 
         // Mở Modal
         openBtn.addEventListener("click", function() {

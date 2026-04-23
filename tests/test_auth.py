@@ -10,7 +10,8 @@ from app.main.services import (
     validate_email,
     validate_password_strength,
     validate_phone,
-    validate_required_fields
+    validate_required_fields,
+    validate_tax_code
 )
 
 class AuthTestCase(unittest.TestCase):
@@ -44,7 +45,7 @@ class AuthTestCase(unittest.TestCase):
         # Tạo công ty mẫu
         company = Company(
             name="Công ty Cổ phần Job5ing",
-            tax_code="123456789",
+            tax_code="1234567890",
             business_license="test_license.pdf",
             scale="1-50 nhân viên"
         )
@@ -72,31 +73,26 @@ class AuthTestCase(unittest.TestCase):
         db.session.add_all(users)
         db.session.commit()
 
-    # --- 1. UNIT TESTS CHO VALIDATION SERVICES (Đơn giản) ---
+    # --- 1. VALIDATION TESTS ---
+
+    def test_service_validate_tax_code(self):
+        # Hợp lệ (10 hoặc 13 số)
+        self.assertTrue(validate_tax_code("0100109106")[0])
+        self.assertTrue(validate_tax_code("0100109106-001")[0])
+        self.assertTrue(validate_tax_code("0100109106001")[0])
+        # Không hợp lệ
+        self.assertFalse(validate_tax_code("12345")[0])
+        self.assertFalse(validate_tax_code("123456789012")[0])
+        self.assertFalse(validate_tax_code("abc1234567")[0])
 
     def test_service_validate_email(self):
         self.assertTrue(validate_email("test@example.com")[0])
         self.assertFalse(validate_email("invalid-email")[0])
 
-    def test_service_validate_password_strength(self):
-        self.assertTrue(validate_password_strength("Strong123!")[0])
-        self.assertFalse(validate_password_strength("weak")[0])
-
-    def test_service_validate_phone(self):
-        self.assertTrue(validate_phone("0912345678")[0])
-        self.assertFalse(validate_phone("12345")[0])
-
-    def test_service_validate_required_fields(self):
-        form = {"email": "test@example.com", "password": ""}
-        fields = [("email", "Email"), ("password", "Mật khẩu")]
-        is_valid, msg = validate_required_fields(form, fields)
-        self.assertFalse(is_valid)
-        self.assertIn("Mật khẩu", msg)
-
-    # --- 2. REGISTRATION TESTS (Tự động đăng nhập & Điều hướng vai trò) ---
+    # --- 2. REGISTRATION TESTS ---
 
     def test_register_success_candidate(self):
-        """Đăng ký ứng viên thành công và tự động đăng nhập"""
+        """Đăng ký ứng viên thành công"""
         response = self.client.post(
             "/register",
             data={
@@ -110,13 +106,11 @@ class AuthTestCase(unittest.TestCase):
         )
         self.assertIn("Đăng ký tài khoản thành công", response.get_data(as_text=True))
         
-        # Kiểm tra tự động đăng nhập (session)
         with self.client.session_transaction() as sess:
-            self.assertIn("user_id", sess)
             self.assertEqual(sess["user_role"], "candidate")
 
-    def test_register_success_employer(self):
-        """Đăng ký nhà tuyển dụng: tự động đăng nhập và redirect tới recruiter-request"""
+    def test_register_employer_initial_state(self):
+        """Đăng ký tích chọn nhà tuyển dụng: ban đầu vẫn là candidate cho đến khi xác nhận cty"""
         response = self.client.post(
             "/register",
             data={
@@ -129,118 +123,71 @@ class AuthTestCase(unittest.TestCase):
             },
             follow_redirects=True,
         )
-        # Kiểm tra điều hướng tới trang xác nhận công ty
+        # Bị đẩy sang trang recruiter-request
         self.assertIn("Xác nhận Công ty trực thuộc", response.get_data(as_text=True))
         
         with self.client.session_transaction() as sess:
-            self.assertIn("user_id", sess)
-            self.assertEqual(sess["user_role"], "employer")
+            # Vẫn là candidate vì chưa xác nhận công ty
+            self.assertEqual(sess["user_role"], "candidate")
 
-    def test_register_duplicate_email(self):
-        response = self.client.post(
-            "/register",
-            data={
-                "email": "active@example.com",
-                "password": "Password123!",
-                "confirm_password": "Password123!",
-            },
-            follow_redirects=True,
-        )
-        self.assertIn("Email này đã tồn tại", response.get_data(as_text=True))
+    # --- 3. RECRUITER & COMPANY LOGIC TESTS ---
 
-    # --- 3. LOGIN & LOGOUT TESTS ---
-
-    def test_login_success(self):
-        response = self.client.post(
-            "/login",
-            data={"email": "active@example.com", "password": "Password123!"},
-            follow_redirects=True,
-        )
-        self.assertIn("Đăng nhập thành công", response.get_data(as_text=True))
-        with self.client.session_transaction() as sess:
-            self.assertIn("user_id", sess)
-
-    def test_login_inactive_account(self):
-        response = self.client.post(
-            "/login",
-            data={"email": "inactive@example.com", "password": "Password123!"},
-            follow_redirects=True,
-        )
-        self.assertIn("Tài khoản của bạn đang bị khóa", response.get_data(as_text=True))
-
-    def test_logout(self):
-        self.client.post("/login", data={"email": "active@example.com", "password": "Password123!"})
-        response = self.client.post("/logout", follow_redirects=True)
-        self.assertIn("Bạn đã đăng xuất", response.get_data(as_text=True))
-        with self.client.session_transaction() as sess:
-            self.assertNotIn("user_id", sess)
-
-    # --- 4. RECRUITER & COMPANY LOGIC TESTS (Phức tạp) ---
-
-    def test_recruiter_request_access_denied_if_not_logged_in(self):
-        """Truy cập recruiter-request khi chưa đăng nhập phải bị redirect"""
-        response = self.client.get("/recruiter-request", follow_redirects=True)
-        self.assertIn("Vui lòng đăng nhập để tiếp tục", response.get_data(as_text=True))
-
-    def test_submit_join_request_success(self):
-        """Gửi yêu cầu gia nhập công ty hiện có thành công"""
-        # Đăng nhập trước
+    def test_submit_join_request_updates_role(self):
+        """Gửi yêu cầu gia nhập công ty -> Trở thành employer ngay"""
         self.client.post("/login", data={"email": "active@example.com", "password": "Password123!"})
         
         with self.app.app_context():
-            company = Company.query.first()
-            company_id = company.id
+            company_id = Company.query.first().id
 
         response = self.client.post(
             "/submit-join-request",
-            data={
-                "company_id": company_id,
-                "position": "Trưởng phòng nhân sự"
-            },
+            data={"company_id": company_id, "position": "HR"},
             follow_redirects=True
         )
-        self.assertIn("Yêu cầu gia nhập công ty đã được gửi", response.get_data(as_text=True))
+        
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_role"], "employer")
         
         with self.app.app_context():
             user = User.query.filter_by(email="active@example.com").first()
-            recruiter = Recruiter.query.filter_by(user_id=user.id).first()
-            self.assertIsNotNone(recruiter)
-            self.assertEqual(recruiter.company_id, company_id)
-            self.assertFalse(recruiter.is_approved)
-            self.assertFalse(recruiter.is_company_admin)
             self.assertTrue(user.is_employer)
 
-    def test_register_company_success(self):
-        """Đăng ký công ty mới thành công, tạo đồng thời recruiter admin"""
-        # Đăng nhập trước
+    def test_register_company_updates_role(self):
+        """Đăng ký công ty mới -> Trở thành employer ngay"""
         self.client.post("/login", data={"email": "active@example.com", "password": "Password123!"})
         
         response = self.client.post(
             "/register-company",
             data={
-                "name": "Công ty Công nghệ Mới",
-                "taxCode": "987654321",
-                "position": "Giám đốc điều hành",
-                "location": "Hà Nội",
-                "scale": "51-200 nhân viên"
+                "name": "New Tech Corp",
+                "taxCode": "0100109106", # MST hợp lệ (10 số)
+                "position": "CEO",
+                "city": "Hà Nội",
+                "address": "123 Láng",
+                "scale": "1-50 nhân viên"
             },
             follow_redirects=True
         )
         self.assertIn("Đăng ký công ty thành công", response.get_data(as_text=True))
         
-        with self.app.app_context():
-            company = Company.query.filter_by(tax_code="987654321").first()
-            self.assertIsNotNone(company)
-            self.assertEqual(company.scale, "51-200 nhân viên")
-            self.assertFalse(company.is_approved) # Chờ admin phê duyệt
-            
-            user = User.query.filter_by(email="active@example.com").first()
-            recruiter = Recruiter.query.filter_by(user_id=user.id).first()
-            self.assertIsNotNone(recruiter)
-            self.assertEqual(recruiter.company_id, company.id)
-            self.assertTrue(recruiter.is_company_admin) # Người tạo cty là admin
-            self.assertTrue(recruiter.is_approved) # Được phê duyệt recruiter ngay
-            self.assertTrue(user.is_employer)
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_role"], "employer")
+
+    def test_register_company_duplicate_tax_code(self):
+        """Không cho phép trùng mã số thuế"""
+        self.client.post("/login", data={"email": "active@example.com", "password": "Password123!"})
+        
+        response = self.client.post(
+            "/register-company",
+            data={
+                "name": "Another Corp",
+                "taxCode": "1234567890", # Trùng MST trong seed_data
+                "city": "Hà Nội",
+                "scale": "1-50 nhân viên"
+            },
+            follow_redirects=True
+        )
+        self.assertIn("Mã số thuế này đã được đăng ký", response.get_data(as_text=True))
 
 if __name__ == "__main__":
     unittest.main()

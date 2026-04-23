@@ -59,6 +59,20 @@ def validate_phone(phone):
     return True, None
 
 
+def validate_tax_code(tax_code):
+    if not tax_code:
+        return False, "Mã số thuế không được để trống."
+    
+    mst = tax_code.strip().replace("-", "")
+    if not (len(mst) == 10 or len(mst) == 13):
+        return False, "Mã số thuế phải có 10 hoặc 13 chữ số."
+    
+    if not mst.isdigit():
+        return False, "Mã số thuế chỉ được chứa các chữ số."
+
+    return True, None
+
+
 def validate_password_strength(password):
     if not PASSWORD_STRENGTH_PATTERN.match(password or ""):
         return (
@@ -144,7 +158,6 @@ def create_account(form_data):
     first_name = (form_data.get("first_name") or "").strip() or None
     last_name = (form_data.get("last_name") or "").strip() or None
     phone = (form_data.get("phone") or "").strip() or None
-    role = "employer" if form_data.get("is_employer") == "on" else "candidate"
 
     is_valid, error_message = validate_email(email)
     if not is_valid:
@@ -168,14 +181,13 @@ def create_account(form_data):
         phone=phone,
         is_active=True,
         is_admin=False,
-        is_employer=role == "employer",
+        is_employer=False, # Wait for company confirmation
         created_at=datetime.utcnow(),
     )
 
     try:
         db.session.add(user)
         db.session.commit()
-        # Tự động đăng nhập ngay sau khi đăng ký thành công
         finalize_login(user)
         return True, "Đăng ký tài khoản thành công."
     except SQLAlchemyError:
@@ -300,4 +312,3 @@ def login_with_google_profile(profile):
 
     finalize_login(user)
     return True, "Đăng nhập Google thành công."
-

@@ -250,13 +250,47 @@ a {
 }
 
 .pagination .page-link {
-    border-radius: 4px;
-    margin: 0 2px;
+    border-radius: 8px;
+    margin: 0 3px;
+    color: var(--site-text);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--site-primary);
+    color: #fff;
+    border-color: var(--site-primary);
 }
 
 .pagination .active .page-link {
-    background-color: #212529;
-    border-color: #212529;
+    background-color: var(--site-primary);
+    border-color: var(--site-primary);
+    color: #fff;
+}
+
+.pagination .disabled .page-link {
+    color: var(--text-muted);
+    background-color: #f8f9fa;
+    border-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+.pagination-container {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.no-jobs {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background: #fff;
+    border-radius: 16px;
+    color: var(--site-subtle);
+    font-size: 1.1rem;
 }
 
 /* ADMIN PROFILE */
@@ -468,7 +502,7 @@ a {
 /* SEARCH PANEL */
 .search-panel {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 150px;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 150px;
     gap: 15px;
     background: #fff;
     padding: 12px;
@@ -478,6 +512,80 @@ a {
     margin: -40px auto 25px;
     position: relative;
     z-index: 10;
+}
+
+/* GLOBAL SELECT STYLING */
+select,
+.form-select,
+.sort-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3e%3cpath fill='%236c757d' d='M201.4 374.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 290.7 86.6 153.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 14px center !important;
+    background-size: 12px !important;
+    padding-right: 35px !important;
+    cursor: pointer;
+}
+
+/* Đảm bảo input không có icon */
+input.form-control {
+    background-image: none !important;
+    padding-right: 12px !important;
+}
+
+/* FLASH MESSAGES ANIMATION */
+.alert {
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.alert.fade-hiding {
+    opacity: 0;
+    transform: translateY(-20px);
+}
+
+.reset-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #f1f5f9;
+    color: var(--site-subtle);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-color);
+}
+
+.reset-filter-btn:hover {
+    background-color: #fee2e2;
+    color: #ef4437;
+    border-color: #fecaca;
+}
+
+.sort-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sort-container label {
+    font-size: 0.9rem;
+    color: var(--site-subtle);
+    font-weight: 600;
+}
+
+.sort-select {
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: var(--site-text);
+    cursor: pointer;
+    background-color: #fff;
+    outline: none;
 }
 
 .search-panel input,
@@ -550,7 +658,7 @@ a {
 .job-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    gap: 30px;
 }
 
 .job-card {
@@ -560,6 +668,23 @@ a {
     display: flex;
     gap: 16px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative; /* Thêm để định vị deadline */
+}
+
+.job-card-deadline {
+    position: absolute;
+    top: 12px;
+    right: 15px;
+    font-size: 0.75rem;
+    color: var(--site-subtle);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.job-card-deadline i {
+    color: var(--site-primary);
 }
 
 .job-card:hover {
