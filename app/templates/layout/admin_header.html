@@ -4,7 +4,7 @@
             <span class="site-logo-mark">
                 <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job5ing logo">
             </span>
-            <span class="site-logo-text ms-2 fw-bold text-primary">Admin</span>
+            <span class="site-logo-text ms-2 fw-bold" style="color: #ff9550;"></span>
         </a>
 
         <nav class="site-nav">
@@ -15,7 +15,14 @@
         </nav>
 
         <div class="dropdown site-user-menu">
-            <a class="site-user-trigger text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+            <a class="site-user-trigger text-decoration-none dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                <span class="site-user-avatar me-2">
+                    {% if current_admin and current_admin.avatar_url %}
+                        <img src="{{ current_admin.avatar_url }}" alt="Admin Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/admin.png') }}" alt="Default Admin Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    {% endif %}
+                </span>
                 <span class="site-user-meta">
                     {{ ((current_admin.last_name or '') ~ ' ' ~ (current_admin.first_name or '')).strip() if current_admin else 'Hi Admin' }}
                 </span>
@@ -33,4 +40,3 @@
         </div>
     </div>
 </header>
-
