@@ -5,25 +5,27 @@ HOME_LOCATIONS = [
     "Cần Thơ",
 ]
 
-
-HOME_FEATURED_JOBS = [
-    {
-        "title": "Thực tập sinh lập trình",
-        "company": "Công ty Job5ing",
-        "salary": "3 - 5 triệu",
-        "experience": "<1 năm kinh nghiệm",
-    },
-    {
-        "title": "Thực tập sinh frontend",
-        "company": "Công ty Job5ing",
-        "salary": "4 - 6 triệu",
-        "experience": "<1 năm kinh nghiệm",
-    },
-    {
-        "title": "Thực tập sinh backend",
-        "company": "Công ty Job5ing",
-        "salary": "4 - 6 triệu",
-        "experience": "<1 năm kinh nghiệm",
-    },
+COMPANY_SCALE_OPTIONS = [
+    "1-50 nhân viên",
+    "51-200 nhân viên",
+    "201-500 nhân viên",
+    "500+ nhân viên",
 ]
 
+EXPERIENCE_OPTIONS = [
+    "Không yêu cầu kinh nghiệm",
+    "<1 năm kinh nghiệm",
+    "1-3 năm kinh nghiệm",
+    "3-5 năm kinh nghiệm",
+    ">5 năm kinh nghiệm",
+]
+
+SALARY_OPTIONS = [
+    "Không lương",
+    "1-3 triệu",
+    "3-5 triệu",
+    "5-10 triệu",
+    "10-30 triệu",
+    "Trên 30 triệu",
+    "Thỏa thuận",
+]
