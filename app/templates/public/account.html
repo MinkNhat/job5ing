@@ -1,7 +1,5 @@
 {% extends 'base_public.html' %}
 
-{% block title %}Job5ing | Tài khoản{% endblock %}
-
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/public/account.css') }}">
 {% endblock %}
@@ -89,7 +87,7 @@
                             value="{{ request.form.get('phone', user.phone or '') }}"
                         >
                     </div>
-                    <divc class="col-md-6"></divc>
+                    <div class="col-md-6"></div>
 
                     <div class="col-md-6">
                         <label for="sex" class="form-label">Giới tính</label>

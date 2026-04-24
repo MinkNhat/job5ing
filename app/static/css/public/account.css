@@ -107,9 +107,8 @@
     border-radius: 4px;
 }
 
-/* Button styling */
 .btn-filter {
-    background: #212529;
+    background: var(--site-primary);
     color: #fff;
     font-size: 0.9rem;
     border: none;
@@ -120,7 +119,7 @@
 }
 
 .btn-filter:hover {
-    background: #1c1f23;
+    background: var(--site-primary-deep);
     color: #fff;
 }
 
