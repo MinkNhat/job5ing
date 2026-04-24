@@ -381,7 +381,6 @@ def parse_resume_gemini(text, file_obj=None):
                 "experience": None,
                 "education": None
             }
-        print("Parsed CV data:", cv_data)
         return True, cv_data, None
     except Exception as e:
         return False, None, str(e)
