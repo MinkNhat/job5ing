@@ -105,6 +105,7 @@ class CV(db.Model):
     skills = db.Column(db.Text)
     experience = db.Column(db.Text)
     cv_url = db.Column(db.String(255))
+    cv_content = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, default=db.func.now())
     last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
