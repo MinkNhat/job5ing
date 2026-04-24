@@ -1,0 +1,108 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Job5ing | Quản lý CV{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/public/resume.css') }}">
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{{ url_for('static', filename='js/resume.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="content-card">
+        <h5 class="fw-bold mb-4">Quản lý CV</h5>
+
+        <div class="resume-container">
+            <div class="resume-uploader">
+                <div class="uploader-image">
+                    <img src="{{ url_for('static', filename='images/resume.png') }}" alt="Resume intro" class="intro-image">
+                </div>
+
+                <div class="uploader-box">
+                    <div id="upload-section" class="upload-section">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <p class="upload-text-main">Tải lên CV để bắt đầu quét</p>
+                        <p class="upload-text-sub">Kéo và thả file hoặc nhấp để chọn (PDF hoặc DOCX)</p>
+                    </div>
+                    <input type="file" id="resume-file-input" class="file-input-hidden" accept=".pdf,.docx">
+                </div>
+            </div>
+
+            <div>
+                <form method="post" class="form-section">
+                    <h6><i class="fas fa-edit"></i> Thông tin CV</h6>
+
+                    <div class="cv-field">
+                        <label for="title" class="form-label">Vị trí</label>
+                        <input 
+                            type="text" 
+                            id="title" 
+                            name="title" 
+                            class="form-control"
+                            value="{{ cv.title or '' }}"
+                        >
+                    </div>
+
+                    <div class="cv-field">
+                        <label for="summary" class="form-label">Tóm tắt</label>
+                        <textarea 
+                            id="summary" 
+                            name="summary" 
+                            class="form-control form-textarea"
+                            rows="3"
+                            placeholder="Mô tả ngắn gọn về bạn, kinh nghiệm và tài năng..."
+                        >{{ cv.summary or '' }}</textarea>
+                    </div>
+
+                    <div class="cv-field">
+                        <label for="skills" class="form-label">Kỹ năng</label>
+                        <textarea 
+                            id="skills" 
+                            name="skills" 
+                            class="form-control form-textarea"
+                            placeholder="VD: Python, JavaScript, React, SQL, Django..."
+                            rows="3"
+                        >{{ cv.skills or '' }}</textarea>
+                    </div>
+
+                    <div class="cv-field">
+                        <label for="education" class="form-label">Học vấn</label>
+                        <textarea 
+                            id="education" 
+                            name="education" 
+                            class="form-control form-textarea"
+                            rows="4"
+                            placeholder="Bằng cấp, chứng chỉ, khóa học..."
+                        >{{ cv.education or '' }}</textarea>
+                    </div>
+
+                    <div class="cv-field">
+                        <label for="experience" class="form-label">Kinh nghiệm làm việc</label>
+                        <textarea 
+                            id="experience" 
+                            name="experience" 
+                            class="form-control form-textarea"
+                            rows="5"
+                            placeholder="Mô tả công việc tại các công ty..."
+                        >{{ cv.experience or '' }}</textarea>
+                    </div>
+                    
+                    <input type="hidden" id="cv_url" name="cv_url" value="{{ cv.cv_url or '' }}">
+
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-submit">
+                            Lưu thông tin CV
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
