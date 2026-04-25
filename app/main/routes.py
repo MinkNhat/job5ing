@@ -2,7 +2,7 @@ import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for, jsonify
 from itsdangerous import BadSignature, BadTimeSignature
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -20,6 +20,9 @@ from .services import (
     require_logged_in_user,
     update_account_profile,
     validate_google_state_token,
+    get_user_cv,
+    preview_resume,
+    save_resume,
     validate_tax_code,
 )
 from app.models import Company, Post, Recruiter, User
@@ -350,6 +353,8 @@ def google_callback():
         flash(message, "success" if success else "danger")
         return redirect(url_for("main.index" if success else "main.login"))
     except (HTTPError, URLError, KeyError, SQLAlchemyError, json.JSONDecodeError):
+        from app import db
+
         db.session.rollback()
         flash("Không thể hoàn tất đăng nhập Google lúc này. Vui lòng kiểm tra lại cấu hình và thử lại.", "danger")
         return redirect(url_for("main.login"))
@@ -362,6 +367,50 @@ def logout():
     return redirect(url_for("main.index"))
 
 
+@main_bp.route("/preview-resume", methods=["POST"])
+def preview_resume_endpoint():
+    user = require_logged_in_user()
+
+    try:
+        is_valid, cv_url, cv_data, error_message = preview_resume(request.files)
+        if not is_valid:
+            return jsonify({"success": False, "message": error_message}), 400
+
+        return jsonify({
+            "success": True,
+            "message": "Preview CV thành công",
+            "cv_url": cv_url,
+            "cv_data": {
+                "title": cv_data.get("title") or "",
+                "summary": cv_data.get("summary") or "",
+                "skills": cv_data.get("skills") or "",
+                "experience": cv_data.get("experience") or "",
+                "education": cv_data.get("education") or ""
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"}), 500
+
+
+@main_bp.route("/resume", methods=["GET", "POST"])
+def resume():
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+
+    if user.is_employer:
+        flash("Chỉ ứng viên mới có thể quản lý CV.", "warning")
+        return redirect(url_for("main.index"))
+
+    if request.method == "POST":
+        success, message = save_resume(user, request.form)
+        flash(message, "success" if success else "danger")
+        return redirect(url_for("main.resume"))
+
+    cv = get_user_cv(user)
+    return render_template("public/resume.html", user=user, cv=cv)
+
+
 @main_bp.route("/post/<int:post_id>")
 def post_details(post_id):
     post = Post.query.get_or_404(post_id)
@@ -372,5 +421,5 @@ def post_details(post_id):
     ).join(Recruiter).filter(
         Recruiter.company_id == post.recruiter.company_id
     ).limit(3).all()
-    
+
     return render_template("public/post_details.html", post=post, related_posts=related_posts)
