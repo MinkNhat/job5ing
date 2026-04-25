@@ -360,3 +360,17 @@ def logout():
     session.clear()
     flash("Bạn đã đăng xuất.", "success")
     return redirect(url_for("main.index"))
+
+
+@main_bp.route("/post/<int:post_id>")
+def post_details(post_id):
+    post = Post.query.get_or_404(post_id)
+    # Fetch related jobs from the same company, excluding the current one
+    related_posts = Post.query.filter(
+        Post.status.in_(["ACTIVE", "PINNED"]),
+        Post.id != post_id
+    ).join(Recruiter).filter(
+        Recruiter.company_id == post.recruiter.company_id
+    ).limit(3).all()
+    
+    return render_template("public/post_details.html", post=post, related_posts=related_posts)

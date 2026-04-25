@@ -60,28 +60,30 @@
     <div class="container">
         <div class="job-grid">
             {% for job in pagination.items %}
-            <article class="job-card">
-                {% if job.deadline %}
-                <div class="job-card-deadline" title="Hạn nộp hồ sơ">
-                    <i class="far fa-clock"></i> {{ job.deadline.strftime('%d/%m/%Y') }}
-                </div>
-                {% endif %}
-                <div class="job-card-logo">
-                    {% if job.recruiter.company.avatar_url %}
-                        <img src="{{ job.recruiter.company.avatar_url }}" alt="{{ job.recruiter.company.name }}">
-                    {% else %}
-                        <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
-                    {% endif %}
-                </div>
-                <div class="job-card-body">
-                    <h3>{{ job.title }}</h3>
-                    <p class="company-name">{{ job.recruiter.company.name }}</p>
-                    <div class="job-card-tags">
-                        <span>{{ job.salary_range or 'Thỏa thuận' }}</span>
-                        <span>{{ job.experience or 'Không yêu cầu kinh nghiệm' }}</span>
+            <a href="{{ url_for('main.post_details', post_id=job.id) }}" class="job-card-link">
+                <article class="job-card">
+                    {% if job.deadline %}
+                    <div class="job-card-deadline" title="Hạn nộp hồ sơ">
+                        <i class="far fa-clock"></i> {{ job.deadline.strftime('%d/%m/%Y') }}
                     </div>
-                </div>
-            </article>
+                    {% endif %}
+                    <div class="job-card-logo">
+                        {% if job.recruiter.company.avatar_url %}
+                            <img src="{{ job.recruiter.company.avatar_url }}" alt="{{ job.recruiter.company.name }}">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
+                        {% endif %}
+                    </div>
+                    <div class="job-card-body">
+                        <h3>{{ job.title }}</h3>
+                        <p class="company-name">{{ job.recruiter.company.name }}</p>
+                        <div class="job-card-tags">
+                            <span>{{ job.salary_range or 'Thỏa thuận' }}</span>
+                            <span>{{ job.experience or 'Không yêu cầu kinh nghiệm' }}</span>
+                        </div>
+                    </div>
+                </article>
+            </a>
             {% else %}
             <div class="no-jobs">
                 <p>Không tìm thấy việc làm nào phù hợp.</p>
