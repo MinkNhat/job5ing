@@ -1,0 +1,252 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Job5ing | Quản lý tuyển dụng{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <div class="container">
+        
+        <!-- Thống kê Card -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="content-card text-center py-4">
+                    <h5 class="text-muted mb-2">Tổng lượt ứng tuyển</h5>
+                    <h2 class="font-weight-bold color-primary">{{ stats.total_apps }}</h2>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="content-card text-center py-4">
+                    <h5 class="text-muted mb-2">Tin đang hiển thị</h5>
+                    <h2 class="font-weight-bold text-success">{{ stats.active_jobs }}</h2>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="content-card text-center py-4">
+                    <h5 class="text-muted mb-2">Hồ sơ chờ duyệt</h5>
+                    <h2 class="font-weight-bold text-warning">{{ stats.pending_apps }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="dashboard-header d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h4 font-weight-bold">Danh sách tin đã đăng ({{ pagination.total }})</h2>
+                <button type="button" class="site-action-btn primary" onclick="openJobModal()">+ Tạo tin mới</button>
+            </div>
+
+            <!-- Toolbar Tìm kiếm & Lọc -->
+            <div class="dashboard-toolbar mb-4">
+                <form class="toolbar-search d-flex gap-2" method="GET">
+                    <input type="text" name="q" placeholder="Tìm theo tiêu đề..." class="form-control" value="{{ request.args.get('q', '') }}">
+                    <select name="status" class="form-control" style="max-width: 200px;">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Đang hiển thị</option>
+                        <option value="closed" {% if request.args.get('status') == 'closed' %}selected{% endif %}>Đã đóng</option>
+                        <option value="overdue" {% if request.args.get('status') == 'overdue' %}selected{% endif %}>Hết hạn</option>
+                        <option value="pinned" {% if request.args.get('status') == 'pinned' %}selected{% endif %}>Đang ghim</option>
+                    </select>
+                    <button type="submit" class="btn-filter"><i class="fas fa-search"></i> Lọc</button>
+                    {% if request.args.get('q') or request.args.get('status') %}
+                        <a href="{{ url_for('recruiter.dashboard') }}" class="reset-filter-btn">Xóa lọc</a>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Danh sách Tin -->
+            <div class="job-list-container">
+                {% for job in jobs %}
+                <div class="job-item-card p-3 mb-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="font-weight-bold mb-1">
+                                <a href="{{ url_for('main.post_details', post_id=job.id) }}" class="text-dark">{{ job.title }}</a>
+                            </h5>
+                            <div class="text-muted small">
+                                <span>Ngày tạo: {{ job.created_at.strftime('%d/%m/%Y') }}</span> | 
+                                <span>Cập nhật: {{ job.last_modified.strftime('%d/%m/%Y') }}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="badge {{ job.status_class }} mr-2">{{ job.status_vn }}</span>
+                            {% if job.deadline %}
+                            <div class="small text-muted mt-1">Hạn: <span class="text-danger font-weight-bold">{{ job.deadline.strftime('%d/%m/%Y') }}</span></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                            <i class="fas fa-users mr-1"></i> Quản lý hồ sơ ứng viên ({{ job.candidate_count }})
+                        </a>
+                        <div class="action-icons">
+                            <button class="btn btn-link text-primary p-2" onclick="openJobModal({{ job.id }})" title="Sửa tin"><i class="far fa-edit fa-lg"></i></button>
+                            <button class="btn btn-link text-danger p-2" onclick="closeJob({{ job.id }})" title="Đóng tin"><i class="far fa-trash-alt fa-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted">Không tìm thấy tin tuyển dụng nào.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Phân trang -->
+            {% if pagination.pages > 1 %}
+            <div class="pagination-container mt-4">
+                <nav>
+                    <ul class="pagination">
+                        <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                            <a class="page-link" href="{{ url_for('recruiter.dashboard', page=pagination.prev_num, q=request.args.get('q', ''), status=request.args.get('status', '')) }}">Trước</a>
+                        </li>
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                            {% if page_num %}
+                                <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                    <a class="page-link" href="{{ url_for('recruiter.dashboard', page=page_num, q=request.args.get('q', ''), status=request.args.get('status', '')) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                            <a class="page-link" href="{{ url_for('recruiter.dashboard', page=pagination.next_num, q=request.args.get('q', ''), status=request.args.get('status', '')) }}">Tiếp</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<!-- JOB MODAL -->
+<div id="jobModal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Đăng tin mới</h3>
+            <button type="button" class="close-modal-btn" onclick="closeJobModal()">&times;</button>
+        </div>
+        <form id="jobForm" method="POST" action="{{ url_for('recruiter.manage_job') }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tiêu đề tin <span class="text-danger">*</span></label>
+                    <input type="text" name="title" id="m_title" class="form-control" required placeholder="VD: Lập trình viên Python">
+                </div>
+
+                <div id="statusGroup" class="form-group d-none">
+                    <label>Trạng thái tin</label>
+                    <select name="status" id="m_status" class="form-control">
+                        <option value="ACTIVE">Đang hiển thị</option>
+                        <option value="PINNED">Ghim tin</option>
+                        <option value="CLOSED">Đóng tin</option>
+                        <option value="OVERDUE">Hết hạn</option>
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Mức lương</label>
+                        <select name="salary_range" id="m_salary" class="form-control">
+                            {% for opt in salary_options %}
+                            <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Kinh nghiệm</label>
+                        <select name="experience" id="m_exp" class="form-control">
+                            {% for opt in experience_options %}
+                            <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Hạn nộp hồ sơ <span class="text-danger">*</span></label>
+                        <input type="date" name="deadline" id="m_deadline" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Kỹ năng (Cách nhau bằng dấu phẩy)</label>
+                        <input type="text" name="skills" id="m_skills" class="form-control" placeholder="Python, SQL, Flask">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Mô tả chi tiết & Yêu cầu <span class="text-danger">*</span></label>
+                    <textarea name="description" id="m_desc" class="form-control" rows="5" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeJobModal()">Hủy</button>
+                <button type="submit" class="site-action-btn primary">Lưu thông tin</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openJobModal(jobId = null) {
+    const modal = document.getElementById('jobModal');
+    const form = document.getElementById('jobForm');
+    const statusGroup = document.getElementById('statusGroup');
+    
+    form.reset();
+    
+    if (jobId) {
+        document.getElementById('modalTitle').innerText = 'Chỉnh sửa tin tuyển dụng';
+        form.action = "{{ url_for('recruiter.manage_job') }}/" + jobId;
+        statusGroup.classList.remove('d-none'); // Hiện select status khi sửa
+        
+        fetch(`/recruiter/job/${jobId}`)
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    const j = data.job;
+                    document.getElementById('m_title').value = j.title;
+                    document.getElementById('m_salary').value = j.salary_range;
+                    document.getElementById('m_exp').value = j.experience;
+                    document.getElementById('m_deadline').value = j.deadline;
+                    document.getElementById('m_skills').value = j.skills || '';
+                    document.getElementById('m_desc').value = j.description;
+                    document.getElementById('m_status').value = j.status;
+                    modal.classList.remove('hidden');
+                }
+            });
+    } else {
+        document.getElementById('modalTitle').innerText = 'Đăng tin tuyển dụng mới';
+        form.action = "{{ url_for('recruiter.manage_job') }}";
+        statusGroup.classList.add('d-none'); // Ẩn select status khi tạo mới (mặc định ACTIVE)
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeJobModal() { document.getElementById('jobModal').classList.add('hidden'); }
+
+function closeJob(id) {
+    if(confirm('Bạn có chắc chắn muốn đóng tin này?')) {
+        const f = document.createElement('form');
+        f.method = 'POST';
+        f.action = `/recruiter/job/close/${id}`;
+        document.body.appendChild(f);
+        f.submit();
+    }
+}
+
+window.onclick = function(e) { if(e.target == document.getElementById('jobModal')) closeJobModal(); }
+</script>
+
+<style>
+.color-primary { color: #ff9550; }
+.job-item-card { transition: background 0.2s; border-radius: 12px; }
+.job-item-card:hover { background: #f8fbff; }
+.action-icons .btn-link:hover { transform: scale(1.2); }
+.badge-status-active { background: #e6fcf5; color: #0ca678; }
+.badge-status-inactive { background: #fff5f5; color: #fa5252; }
+.pagination { justify-content: center; gap: 5px; }
+.page-link { border-radius: 8px !important; color: #245d94; }
+.page-item.active .page-link { background: #245d94; border-color: #245d94; }
+</style>
+{% endblock %}
