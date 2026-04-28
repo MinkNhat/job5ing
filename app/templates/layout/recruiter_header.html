@@ -1,0 +1,62 @@
+<header class="site-header admin-header">
+    <div class="container site-header-inner">
+        <a class="site-logo" href="{{ url_for('main.index') }}">
+            <span class="site-logo-mark">
+                <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job5ing logo">
+            </span>
+            <span class="site-logo-text ms-2 fw-bold" style="color: #ff9550;"></span>
+        </a>
+
+        <nav class="site-nav">
+            <a class="site-nav-link {% if request.endpoint == 'recruiter.index' %}active{% endif %}" 
+               href="{{ url_for('recruiter.index') }}">
+                Tổng quan
+            </a>
+            <a class="site-nav-link" href="#">
+                Tin tuyển dụng
+            </a>
+            <a class="site-nav-link {% if request.endpoint == 'recruiter.company' %}active{% endif %}" 
+               href="{{ url_for('recruiter.company') }}">
+                Công ty
+            </a>
+        </nav>
+
+        <div class="dropdown site-user-menu">
+            <a class="site-user-trigger text-decoration-none dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                <span class="site-user-avatar me-2">
+                    {% if current_recruiter and current_recruiter.user and current_recruiter.user.avatar_url %}
+                        <img src="{{ current_recruiter.user.avatar_url }}" alt="Recruiter Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/admin.png') }}" alt="Default Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    {% endif %}
+                </span>
+                <span class="site-user-meta">
+                    {% if current_recruiter and current_recruiter.user %}
+                        {{ ((current_recruiter.user.last_name or '') ~ ' ' ~ (current_recruiter.user.first_name or '')).strip() }}
+                    {% else %}
+                        Nhà tuyển dụng
+                    {% endif %}
+                </span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                    <h6 class="dropdown-header">
+                        {% if current_recruiter and current_recruiter.company %}
+                            {{ current_recruiter.company.name }}
+                        {% else %}
+                            Công ty
+                        {% endif %}
+                    </h6>
+                </li>
+                <li><a class="dropdown-item" href="{{ url_for('recruiter.company') }}">Thông tin công ty</a></li>
+                <li><a class="dropdown-item" href="">Quản lý tuyển dụng</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="post" action="{{ url_for('main.logout') }}">
+                        <button type="submit" class="dropdown-item text-danger">Đăng xuất</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>
