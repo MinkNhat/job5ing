@@ -1,0 +1,45 @@
+{% extends "base_recruiter.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- stats -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Tin tuyển dụng</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.total_posts }}</h2>
+                    <p class="mt-2 mb-0 small">Tổng số tin đang hoạt động</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-success text-white">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Ứng viên</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.total_candidates }}</h2>
+                    <p class="mt-2 mb-0 small">Tổng số ứng viên</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-info text-white">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Chưa xem</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.new_candidates }}</h2>
+                    <p class="mt-2 mb-0 small">Số hồ sơ mới</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-warning text-dark">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase opacity-75">Đã duyệt</h6>
+                    <h2 class="display-6 fw-bold mb-0">{{ stats.approved_candidates }}</h2>
+                    <p class="mt-2 mb-0 small text-dark-50">Số ứng viên đã được duyệt</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
