@@ -2,10 +2,10 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.models import User, Company, Post, Application, Notification
+from app.models import User, Company, Post, Application, Notification, PostReport
 from services.smtp_service import send_approval_email
 
-def get_dashboard_stats():
+def get_dashboard_stats(admin_id):
     total_users = User.query.count()
     total_companies = Company.query.count()
     total_posts = Post.query.count()
@@ -13,6 +13,10 @@ def get_dashboard_stats():
 
     active_posts = Post.query.filter_by(status='ACTIVE').count()
     pending_companies = Company.query.filter_by(is_approved=False).count()
+    
+    # Lấy danh sách thông báo thực tế từ DB
+    notifications = Notification.query.filter_by(user_id=admin_id)\
+        .order_by(Notification.created_at.desc()).all()
 
     return {
         "total_users": total_users,
@@ -20,8 +24,24 @@ def get_dashboard_stats():
         "total_posts": total_posts,
         "total_applications": total_applications,
         "active_posts": active_posts,
-        "pending_companies": pending_companies
+        "pending_companies": pending_companies,
+        "notifications": notifications
     }
+
+def delete_admin_notifications(admin_id, notification_ids):
+    if not notification_ids:
+        return False, "Chưa chọn thông báo nào."
+    
+    try:
+        Notification.query.filter(
+            Notification.id.in_(notification_ids),
+            Notification.user_id == admin_id
+        ).delete(synchronize_session=False)
+        db.session.commit()
+        return True, "Đã xóa thông báo thành công."
+    except SQLAlchemyError:
+        db.session.rollback()
+        return False, "Lỗi khi xóa thông báo."
 
 def get_users(page=1, keyword=None, role=None, status=None):
     query = User.query
@@ -115,14 +135,16 @@ def update_user(user, form_data):
         return False, "Không thể cập nhật tài khoản. Vui lòng thử lại."
 
 
-def update_admin_profile(user, form_data):
+import cloudinary.uploader
+
+def update_admin_profile(user, form_data, files=None):
     email = (form_data.get("email") or "").strip()
     first_name = (form_data.get("first_name") or "").strip() or None
     last_name = (form_data.get("last_name") or "").strip() or None
     phone = (form_data.get("phone") or "").strip() or None
     address = (form_data.get("address") or "").strip() or None
     sex = (form_data.get("sex") or "").strip() or None
-    avatar_url = (form_data.get("avatar_url") or "").strip() or None
+    avatar_url = (form_data.get("avatar_url") or "").strip() or user.avatar_url
 
     if not email:
         return False, "Email không được để trống."
@@ -130,6 +152,22 @@ def update_admin_profile(user, form_data):
     existing_user = User.query.filter(User.email == email, User.id != user.id).first()
     if existing_user:
         return False, "Email này đã tồn tại."
+
+    # Handle avatar upload via Cloudinary
+    if files and "avatar" in files:
+        avatar_file = files["avatar"]
+        if avatar_file and avatar_file.filename:
+            try:
+                result = cloudinary.uploader.upload(
+                    avatar_file,
+                    folder="job5ing/avatars",
+                    resource_type="auto",
+                    overwrite=True,
+                    unique_filename=False
+                )
+                avatar_url = result.get("secure_url")
+            except Exception as e:
+                return False, f"Không thể upload ảnh lên. Vui lòng thử lại. ({str(e)})"
 
     user.email = email
     user.first_name = first_name
@@ -279,3 +317,22 @@ def delete_company(company):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể xóa công ty do có dữ liệu liên quan."
+
+
+def get_post_reports(post_id):
+    return PostReport.query.filter_by(post_id=post_id, is_resolved=False).all()
+
+
+def dismiss_post_reports(post_id):
+    post = db.session.get(Post, post_id)
+    if not post:
+        return False, "Không tìm thấy tin tuyển dụng."
+    
+    try:
+        PostReport.query.filter_by(post_id=post_id).update({"is_resolved": True})
+        post.is_reported = False
+        db.session.commit()
+        return True, "Đã gỡ bỏ báo cáo cho tin này."
+    except SQLAlchemyError:
+        db.session.rollback()
+        return False, "Lỗi khi xử lý gỡ báo cáo."

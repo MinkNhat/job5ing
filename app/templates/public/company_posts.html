@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý tin tuyển dụng - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Tin tuyển dụng của {{ company.name }}</h2>
+            <p class="text-muted">Danh sách các vị trí đang đăng tuyển</p>
+        </div>
+        <a href="#" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Đăng tin mới
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-muted">
+                        <tr>
+                            <th class="px-4 py-3">Vị trí</th>
+                            <th class="py-3">Ngày đăng</th>
+                            <th class="py-3">Hạn nộp</th>
+                            <th class="py-3">Trạng thái</th>
+                            <th class="py-3">Ứng viên</th>
+                            <th class="py-3 text-end px-4">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in posts %}
+                        <tr>
+                            <td class="px-4">
+                                <div class="fw-bold text-primary">{{ post.title }}</div>
+                                <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>{{ company.location }}</small>
+                            </td>
+                            <td>{{ post.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ post.deadline.strftime('%d/%m/%Y') if post.deadline else 'Không thời hạn' }}</td>
+                            <td>
+                                {% if post.status == 'ACTIVE' %}
+                                    <span class="badge bg-success-subtle text-success px-3">Đang tuyển</span>
+                                {% elif post.status == 'PINNED' %}
+                                    <span class="badge bg-warning-subtle text-warning px-3">Ghim đầu</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary px-3">{{ post.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="fw-bold me-1">{{ post.applications|length }}</span>
+                                    <small class="text-muted">hồ sơ</small>
+                                </div>
+                            </td>
+                            <td class="text-end px-4">
+                                <a href="{{ url_for('main.manage_candidates', post_id=post.id) }}" class="btn btn-outline-primary btn-sm me-1">
+                                    <i class="fas fa-users me-1"></i> Quản lý ứng viên
+                                </a>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Sửa tin</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>Xem tin</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Xóa</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-briefcase fa-3x mb-3"></i>
+                                <p>Công ty bạn chưa có tin tuyển dụng nào.</p>
+                                <a href="#" class="btn btn-primary btn-sm">Đăng tin ngay</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-success-subtle { background-color: #d1e7dd; }
+    .bg-warning-subtle { background-color: #fff3cd; }
+    .bg-secondary-subtle { background-color: #e2e3e5; }
+</style>
+{% endblock %}

@@ -23,6 +23,19 @@ class PostManagementTestCase(unittest.TestCase):
         with self.app.app_context():
             db.create_all()
             self.seed_data()
+        
+        self.login_admin()
+
+    def login_admin(self):
+        with self.app.app_context():
+            admin = User(email="admin@test.com", password="123", is_admin=True, is_active=True)
+            db.session.add(admin)
+            db.session.commit()
+            self.admin_id = admin.id
+
+        with self.client.session_transaction() as sess:
+            sess['user_id'] = self.admin_id
+            sess['user_role'] = 'admin'
 
     def tearDown(self):
         with self.app.app_context():

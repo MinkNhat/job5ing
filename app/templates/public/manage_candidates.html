@@ -1,0 +1,226 @@
+{% extends "base_public.html" %}
+
+{% block title %}Quản lý ứng viên - {{ post.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .candidate-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .job-header-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 30px;
+    }
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .ai-score-badge {
+        background: #6f42c1;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
+    }
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .filter-btn-group .btn {
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+        margin-right: 10px;
+    }
+    .ai-action-btn {
+        background: #1a1a1a;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s;
+    }
+    .ai-action-btn:hover {
+        background: #333;
+        transform: translateY(-2px);
+    }
+    .candidate-avatar {
+        width: 48px;
+        height: 48px;
+        background: #e9ecef;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item active">Quản lý ứng viên</li>
+        </ol>
+    </nav>
+
+    <h2 class="fw-bold mb-4">QUẢN LÝ DANH SÁCH ỨNG VIÊN</h2>
+
+    <!-- Job Info Card -->
+    <div class="job-header-card">
+        <h4 class="fw-bold text-uppercase mb-3">{{ post.title }}</h4>
+        <div class="d-flex flex-wrap gap-4 text-muted">
+            <span><i class="far fa-calendar-alt me-2"></i>Hạn: {{ post.deadline.strftime('%d/%m/%Y') if post.deadline else 'N/A' }}</span>
+            <span><i class="far fa-eye me-2"></i><span class="badge bg-success">Đang hiển thị</span></span>
+            <span><i class="fas fa-users me-2"></i>Tổng hồ sơ: {{ stats.total }}</span>
+        </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <form action="{{ url_for('main.run_ai_screening', post_id=post.id) }}" method="POST">
+            <button type="submit" class="ai-action-btn">
+                <i class="fas fa-wand-magic-sparkles"></i> LỌC HỒ SƠ PHÙ HỢP NHẤT
+            </button>
+        </form>
+
+        <div class="filter-btn-group d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main.manage_candidates', post_id=post.id) }}" 
+               class="btn {{ 'btn-dark' if not current_status else 'btn-outline-secondary' }}">
+                Tất cả ({{ stats.all }})
+            </a>
+            <a href="{{ url_for('main.manage_candidates', post_id=post.id, status='RECEIVED') }}" 
+               class="btn {{ 'btn-dark' if current_status == 'RECEIVED' else 'btn-outline-secondary' }}">
+                Chờ duyệt ({{ stats.received }})
+            </a>
+            <a href="{{ url_for('main.manage_candidates', post_id=post.id, status='INTERVIEW') }}" 
+               class="btn {{ 'btn-dark' if current_status == 'INTERVIEW' else 'btn-outline-secondary' }}">
+                Phỏng vấn ({{ stats.interview }})
+            </a>
+            <a href="{{ url_for('main.manage_candidates', post_id=post.id, status='APPROVED') }}" 
+               class="btn {{ 'btn-dark' if current_status == 'APPROVED' else 'btn-outline-secondary' }}">
+                Đồng ý ({{ stats.approved }})
+            </a>
+            <a href="{{ url_for('main.manage_candidates', post_id=post.id, status='REJECT') }}" 
+               class="btn {{ 'btn-dark' if current_status == 'REJECT' else 'btn-outline-secondary' }}">
+                Từ chối ({{ stats.reject }})
+            </a>
+        </div>
+    </div>
+
+    <!-- Candidate List Table -->
+    <div class="table-container">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 40%">Danh sách ứng viên</th>
+                        <th>Ngày nộp</th>
+                        {% if is_sorted_ai %}
+                        <th>Độ phù hợp (AI)</th>
+                        {% endif %}
+                        <th>Trạng thái</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in pagination.items %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="candidate-avatar me-3">
+                                    <i class="fas fa-user fa-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-uppercase">{{ app.cv.user.last_name }} {{ app.cv.user.first_name }}</div>
+                                    <small class="text-muted">{{ app.cv.skills | truncate(50) if app.cv.skills else 'Chưa cập nhật kỹ năng' }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ app.applied_at.strftime('%d/%m/%Y') }}</td>
+                        {% if is_sorted_ai %}
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 6px; max-width: 100px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ app.ai_score }}%"></div>
+                                </div>
+                                <span class="fw-bold text-primary">{{ app.ai_score }}%</span>
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td>
+                            <form action="{{ url_for('main.change_app_status') }}" method="POST" class="status-form">
+                                <input type="hidden" name="application_id" value="{{ app.id }}">
+                                <select name="status" class="form-select form-select-sm fw-bold border-0 bg-light" onchange="this.form.submit()"
+                                        style="width: 130px; 
+                                               color: {% if app.status == 'INTERVIEW' %}#0d6efd{% elif app.status == 'APPROVED' %}#198754{% elif app.status == 'REJECT' %}#dc3545{% else %}#6c757d{% endif %};">
+                                    <option value="RECEIVED" {{ 'selected' if app.status == 'RECEIVED' }}>RECEIVED</option>
+                                    <option value="INTERVIEW" {{ 'selected' if app.status == 'INTERVIEW' }}>INTERVIEW</option>
+                                    <option value="APPROVED" {{ 'selected' if app.status == 'APPROVED' }}>APPROVED</option>
+                                    <option value="REJECT" {{ 'selected' if app.status == 'REJECT' }}>REJECT</option>
+                                </select>
+                            </form>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('main.view_candidate_cv', application_id=app.id) }}" class="btn btn-sm btn-outline-primary px-3">Xem chi tiết</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ 5 if is_sorted_ai else 4 }}" class="text-center py-5 text-muted">
+                            Chưa có ứng viên nào ứng tuyển cho vị trí này.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination Controls -->
+        {% if pagination.pages > 1 %}
+        <nav class="mt-4 d-flex justify-content-center">
+            <ul class="pagination pagination-sm">
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                    <a class="page-link" href="{{ url_for('main.manage_candidates', post_id=post.id, page=pagination.prev_num, status=current_status, sort_by_ai=1 if is_sorted_ai else 0) if pagination.has_prev else '#' }}">Trước</a>
+                </li>
+                
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                            <a class="page-link" href="{{ url_for('main.manage_candidates', post_id=post.id, page=page_num, status=current_status, sort_by_ai=1 if is_sorted_ai else 0) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                    <a class="page-link" href="{{ url_for('main.manage_candidates', post_id=post.id, page=pagination.next_num, status=current_status, sort_by_ai=1 if is_sorted_ai else 0) if pagination.has_next else '#' }}">Sau</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

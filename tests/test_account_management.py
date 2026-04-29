@@ -23,6 +23,13 @@ class AccountManagementTestCase(unittest.TestCase):
         with self.app.app_context():
             db.create_all()
             self.seed_users()
+        
+        self.login_admin()
+
+    def login_admin(self):
+        with self.client.session_transaction() as sess:
+            sess['user_id'] = 1 # ID của AdminPham từ seed_users
+            sess['user_role'] = 'admin'
 
     def tearDown(self):
         with self.app.app_context():

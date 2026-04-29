@@ -1,0 +1,113 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Cấu hình hệ thống | Quản trị{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+    .config-card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    .config-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #edf2f9;
+        padding: 1rem 1.5rem;
+        border-radius: 12px 12px 0 0;
+    }
+    .config-body {
+        padding: 1.5rem;
+    }
+    .config-label {
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    .config-desc {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-bottom: 1rem;
+    }
+    .config-key-badge {
+        font-family: monospace;
+        background: #e2e8f0;
+        color: #475569;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+    .save-btn-container {
+        position: sticky;
+        bottom: 2rem;
+        z-index: 100;
+        text-align: right;
+    }
+    .save-btn {
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid pb-5">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+        <h1 class="h2">Cấu hình hệ thống</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin_panel.index') }}">Admin</a></li>
+                <li class="breadcrumb-item active">Settings</li>
+            </ol>
+        </nav>
+    </div>
+
+    <form method="post" action="{{ url_for('admin_panel.settings') }}">
+        <div class="row">
+            {% for config in configs %}
+            <div class="col-lg-6">
+                <div class="card config-card">
+                    <div class="card-body config-body">
+                        <input type="hidden" name="config_id" value="{{ config.id }}">
+                        
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <label class="config-label mb-0" for="config_{{ config.id }}">
+                                {{ config.description or 'Cấu hình hệ thống' }}
+                            </label>
+                            <span class="config-key-badge">{{ config.config_key }}</span>
+                        </div>
+                        
+                        <p class="config-desc">
+                            {% if config.config_type == 'LIST' %}
+                                Nhập các giá trị, cách nhau bằng dấu phẩy.
+                            {% endif %}
+                        </p>
+
+                        {% if config.config_type == 'LIST' or config.config_key in ['EXPERIENCE_LEVELS', 'SALARY_RANGES'] %}
+                            <textarea class="form-control" name="config_value" id="config_{{ config.id }}" rows="3">{{ config.config_value }}</textarea>
+                        {% elif config.config_type == 'NUMBER' %}
+                            <input type="number" class="form-control" name="config_value" id="config_{{ config.id }}" value="{{ config.config_value }}">
+                        {% else %}
+                            <input type="text" class="form-control" name="config_value" id="config_{{ config.id }}" value="{{ config.config_value }}">
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="save-btn-container">
+            <button type="submit" class="btn btn-primary save-btn">
+                <i class="fas fa-save me-2"></i> Lưu tất cả thay đổi
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

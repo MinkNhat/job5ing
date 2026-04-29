@@ -98,6 +98,53 @@
                 </select>
             </div>
 
+            <!-- CV Professional Info for Admin to Edit -->
+            <div class="col-12 mt-4">
+                <div class="d-flex align-items-center mb-3">
+                    <hr class="flex-grow-1">
+                    <span class="mx-3 fw-bold text-muted text-uppercase small">Thông tin hồ sơ chuyên môn (CV)</span>
+                    <hr class="flex-grow-1">
+                </div>
+            </div>
+
+            {% set cv = user.cvs[0] if user.cvs else None %}
+            <div class="col-12">
+                <label for="cv_title" class="form-label">Tiêu đề hồ sơ</label>
+                <input
+                    type="text"
+                    id="cv_title"
+                    name="cv_title"
+                    class="form-control"
+                    value="{{ request.form.get('cv_title', cv.title if cv else '') }}"
+                >
+            </div>
+
+            <div class="col-12">
+                <label for="cv_summary" class="form-label">Giới thiệu ngắn</label>
+                <textarea id="cv_summary" name="cv_summary" class="form-control" rows="2">{{ request.form.get('cv_summary', cv.summary if cv else '') }}</textarea>
+            </div>
+
+            <div class="col-12">
+                <label for="cv_education" class="form-label">Học vấn</label>
+                <textarea id="cv_education" name="cv_education" class="form-control" rows="2">{{ request.form.get('cv_education', cv.education if cv else '') }}</textarea>
+            </div>
+
+            <div class="col-12">
+                <label for="cv_experience" class="form-label">Kinh nghiệm</label>
+                <textarea id="cv_experience" name="cv_experience" class="form-control" rows="3">{{ request.form.get('cv_experience', cv.experience if cv else '') }}</textarea>
+            </div>
+
+            <div class="col-12">
+                <label for="cv_skills" class="form-label">Kỹ năng</label>
+                <input
+                    type="text"
+                    id="cv_skills"
+                    name="cv_skills"
+                    class="form-control"
+                    value="{{ request.form.get('cv_skills', cv.skills if cv else '') }}"
+                >
+            </div>
+
             <div class="col-12 d-flex gap-2 justify-content-end mt-3">
                 <a href="{{ next_url or url_for('admin_panel.accounts') }}" class="btn btn-outline-secondary">Hủy</a>
                 <button type="submit" class="btn btn-filter">Lưu thay đổi</button>

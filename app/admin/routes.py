@@ -17,6 +17,8 @@ from .service import (
     update_admin_profile,
     update_post_status,
     update_user,
+    get_post_reports,
+    dismiss_post_reports,
 )
 
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/admin")
@@ -37,8 +39,21 @@ def inject_admin_context():
 
 @admin_bp.route("/")
 def index():
-    stats = get_dashboard_stats()
+    admin = get_current_admin()
+    stats = get_dashboard_stats(admin.id)
     return render_template("admin/index.html", stats=stats)
+
+
+@admin_bp.route("/notifications/delete", methods=["POST"])
+def delete_notifications():
+    admin = get_current_admin()
+    notification_ids = request.form.getlist("notification_ids")
+    
+    from .service import delete_admin_notifications
+    success, message = delete_admin_notifications(admin.id, notification_ids)
+    
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("admin_panel.index"))
 
 
 @admin_bp.route("/accounts")
@@ -61,7 +76,7 @@ def profile():
         return redirect(url_for("admin_panel.accounts"))
 
     if request.method == "POST":
-        success, message = update_admin_profile(user, request.form)
+        success, message = update_admin_profile(user, request.form, request.files)
         flash(message, "success" if success else "danger")
         if success:
             return redirect(url_for("admin_panel.profile"))
@@ -187,3 +202,21 @@ def delete_company_route(company_id):
     success, message = delete_company(company)
     flash(message, "success" if success else "danger")
     return redirect(url_for("admin_panel.companies", **request.args))
+
+
+@admin_bp.route("/posts/<int:post_id>/reports")
+def view_post_reports(post_id):
+    post = get_post_by_id(post_id)
+    if not post:
+        flash("Không tìm thấy tin tuyển dụng.", "danger")
+        return redirect(url_for("admin_panel.posts"))
+
+    reports = get_post_reports(post_id)
+    return render_template("admin/post_reports.html", post=post, reports=reports)
+
+
+@admin_bp.route("/posts/<int:post_id>/dismiss_reports", methods=["POST"])
+def dismiss_reports(post_id):
+    success, message = dismiss_post_reports(post_id)
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("admin_panel.posts", **request.args))

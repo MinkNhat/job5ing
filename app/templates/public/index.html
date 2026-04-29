@@ -66,6 +66,15 @@
                     <i class="far fa-clock"></i> {{ job.deadline.strftime('%d/%m/%Y') }}
                 </div>
                 {% endif %}
+
+                {% if current_user and not current_user.is_admin and not current_user.is_employer %}
+                <button class="job-report-btn" title="Báo cáo tin này" 
+                        data-bs-toggle="modal" data-bs-target="#reportModal" 
+                        data-post-id="{{ job.id }}" data-post-title="{{ job.title }}">
+                    <i class="fas fa-flag"></i>
+                </button>
+                {% endif %}
+
                 <div class="job-card-logo">
                     {% if job.recruiter.company.avatar_url %}
                         <img src="{{ job.recruiter.company.avatar_url }}" alt="{{ job.recruiter.company.name }}">
@@ -118,4 +127,103 @@
         {% endif %}
     </div>
 </section>
+
+<!-- Modal Báo cáo -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalLabel">Báo cáo tin tuyển dụng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="reportForm" method="POST">
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Bạn đang báo cáo tin: <strong id="reportPostTitle"></strong></p>
+                    
+                    <label class="form-label fw-bold">Lý do báo cáo:</label>
+                    <div class="mb-3">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reason" id="reason1" value="Lừa đảo" required>
+                            <label class="form-check-label" for="reason1">Dấu hiệu lừa đảo, đa cấp</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reason" id="reason2" value="Sai sự thật">
+                            <label class="form-check-label" for="reason2">Thông tin sai sự thật, hết hạn</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reason" id="reason3" value="Spam">
+                            <label class="form-check-label" for="reason3">Tin rác, nội dung không phù hợp</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reason" id="reason4" value="Khác">
+                            <label class="form-check-label" for="reason4">Lý do khác</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reportDescription" class="form-label fw-bold">Mô tả chi tiết (tùy chọn):</label>
+                        <textarea class="form-control" name="description" id="reportDescription" rows="3" placeholder="Nhập thêm chi tiết về vi phạm..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger px-4">Gửi báo cáo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .job-report-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.8);
+        border: none;
+        color: #94a3b8;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        z-index: 5;
+    }
+    .job-report-btn:hover {
+        background: #fee2e2;
+        color: #ef4444;
+        transform: scale(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const reportModal = document.getElementById('reportModal');
+    if (reportModal) {
+        reportModal.addEventListener('show.bs.modal', function(event) {
+            // Nút kích hoạt modal
+            const button = event.relatedTarget;
+            
+            // Lấy dữ liệu từ thuộc tính data-post-*
+            const postId = button.getAttribute('data-post-id');
+            const postTitle = button.getAttribute('data-post-title');
+            
+            // Cập nhật nội dung modal
+            const modalTitle = reportModal.querySelector('#reportPostTitle');
+            const form = reportModal.querySelector('#reportForm');
+            
+            modalTitle.textContent = postTitle;
+            form.action = `/posts/${postId}/report`;
+        });
+    }
+});
+</script>
 {% endblock %}

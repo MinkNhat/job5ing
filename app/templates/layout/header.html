@@ -41,7 +41,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ url_for('main.account') }}">Thông tin cá nhân</a></li>
                         {% if current_user.is_employer %}
-                            <li><a class="dropdown-item" href="#">Chuyển sang tài khoản công ty</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.recruiter_posts') }}">Chuyển sang tài khoản công ty</a></li>
                         {% endif %}
                         <li><hr class="dropdown-divider"></li>
                         <li>
