@@ -25,7 +25,7 @@ from .services import (
     save_resume,
     validate_tax_code,
 )
-from app.models import Company, Post, Recruiter, User
+from app.models import Company, Post, Recruiter, User, Application, Notification, CV
 from app import db
 
 main_bp = Blueprint("main", __name__)
@@ -408,7 +408,7 @@ def resume():
         return redirect(url_for("main.resume"))
 
     cv = get_user_cv(user)
-    return render_template("public/resume.html", user=user, cv=cv)
+    return render_template("candidate/resume.html", user=user, cv=cv)
 
 
 @main_bp.route("/post/<int:post_id>")
@@ -422,4 +422,98 @@ def post_details(post_id):
         Recruiter.company_id == post.recruiter.company_id
     ).limit(3).all()
 
-    return render_template("public/post_details.html", post=post, related_posts=related_posts)
+    has_applied = False
+    cv = None
+    if 'user_id' in session:
+        user = db.session.get(User, session['user_id'])
+        if user and not user.is_employer:
+            cv = CV.query.filter_by(user_id=user.id).first()
+            if cv:
+                has_applied = Application.query.filter_by(cv_id=cv.id, post_id=post.id).first() is not None
+
+    return render_template("public/post_details.html", post=post, related_posts=related_posts, has_applied=has_applied, cv=cv)
+
+@main_bp.route("/post/<int:post_id>/apply", methods=["POST"])
+def apply_job(post_id):
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+        
+    if user.is_employer:
+        flash("Nhà tuyển dụng không thể ứng tuyển.", "warning")
+        return redirect(url_for("main.post_details", post_id=post_id))
+        
+    post = Post.query.get_or_404(post_id)
+    
+    # Update phone if provided
+    new_phone = request.form.get("phone")
+    if new_phone and new_phone != user.phone:
+        user.phone = new_phone
+    
+    cv = get_user_cv(user)
+    
+    # Handle New CV Upload
+    if 'new_cv' in request.files and request.files['new_cv'].filename != '':
+        new_cv_file = request.files['new_cv']
+        ext = ("." + new_cv_file.filename.rsplit(".", 1)[1].lower()) if "." in new_cv_file.filename else ""
+        if ext in [".pdf", ".doc", ".docx"]:
+            try:
+                import cloudinary.uploader
+                upload_result = cloudinary.uploader.upload(
+                    new_cv_file,
+                    folder="job5ing/resumes",
+                    resource_type="auto"
+                )
+                cv.cv_url = upload_result.get("secure_url")
+                cv.title = new_cv_file.filename
+            except Exception as e:
+                flash(f"Lỗi khi tải CV lên: {str(e)}", "danger")
+                return redirect(url_for("main.post_details", post_id=post_id))
+
+    if not cv or (not cv.cv_url and not cv.cv_content):
+        flash("Vui lòng cập nhật hồ sơ CV (tải lên file hoặc điền thông tin) trước khi ứng tuyển.", "warning")
+        return redirect(url_for("main.resume"))
+        
+    # Check if already applied
+    existing_app = Application.query.filter_by(cv_id=cv.id, post_id=post.id).first()
+    if existing_app:
+        flash("Bạn đã ứng tuyển vào vị trí này rồi.", "info")
+        return redirect(url_for("main.post_details", post_id=post_id))
+        
+    cover_letter = request.form.get("cover_letter")
+    application = Application(cv_id=cv.id, post_id=post.id, cover_letter=cover_letter)
+    db.session.add(application)
+    
+    # Notify recruiter
+    notification = Notification(
+        user_id=post.recruiter_id,
+        content=f"Có ứng viên mới ứng tuyển vào vị trí {post.title}.",
+        type='NEW_APPLICATION'
+    )
+    db.session.add(notification)
+    
+    try:
+        db.session.commit()
+        flash("Ứng tuyển thành công!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Có lỗi xảy ra, vui lòng thử lại.", "danger")
+        
+    return redirect(url_for("main.post_details", post_id=post_id))
+
+@main_bp.route("/applied-jobs")
+def applied_jobs():
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+        
+    if user.is_employer:
+        flash("Chỉ ứng viên mới có thể xem danh sách việc làm đã ứng tuyển.", "warning")
+        return redirect(url_for("main.index"))
+        
+    cv = CV.query.filter_by(user_id=user.id).first()
+    applications = []
+    if cv:
+        applications = Application.query.filter_by(cv_id=cv.id).order_by(Application.applied_at.desc()).all()
+        
+    return render_template("candidate/applied_jobs.html", applications=applications)
