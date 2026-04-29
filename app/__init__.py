@@ -26,10 +26,8 @@ def create_app(test_config=None):
 
     from app.admin.routes import admin_bp
     app.register_blueprint(admin_bp)
-    from app.recruiter.routes import recruiter_bp
+    from app.recruiter import recruiter_bp
     app.register_blueprint(recruiter_bp)
     from app.main.routes import main_bp
     app.register_blueprint(main_bp)
-    from app.recruiter import recruiter_bp
-    app.register_blueprint(recruiter_bp)
     return app
