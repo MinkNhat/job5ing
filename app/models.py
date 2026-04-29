@@ -175,6 +175,8 @@ class Application(db.Model):
         default='RECEIVED'
     )
 
+    cover_letter = db.Column(db.Text)
+
     __table_args__ = (
         db.UniqueConstraint('cv_id', 'post_id', name='uq_app_cv_post'),
     )

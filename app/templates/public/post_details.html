@@ -33,9 +33,150 @@
             </div>
             
             <div class="job-header-actions">
-                <button class="btn-apply"><i class="fas fa-paper-plane"></i> Ứng tuyển ngay</button>
+                {% if current_user and current_user.is_employer %}
+                    <!-- Nhà tuyển dụng không thể ứng tuyển -->
+                {% elif has_applied %}
+                    <button class="btn-apply" disabled style="background-color: #6c757d; cursor: not-allowed; opacity: 0.7;"><i class="fas fa-check"></i> Đã ứng tuyển</button>
+                {% elif not current_user %}
+                    <a href="{{ url_for('main.login') }}" class="btn-apply"><i class="fas fa-paper-plane"></i> Đăng nhập để ứng tuyển</a>
+                {% else %}
+                    <button type="button" class="btn-apply" data-bs-toggle="modal" data-bs-target="#applyModal">
+                        <i class="fas fa-paper-plane"></i> Ứng tuyển ngay
+                    </button>
+                {% endif %}
             </div>
         </div>
+
+        <!-- Apply Modal -->
+        <div class="modal fade" id="applyModal" tabindex="-1" aria-labelledby="applyModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <form action="{{ url_for('main.apply_job', post_id=post.id) }}" method="POST" enctype="multipart/form-data">
+                        <div class="modal-header bg-white border-bottom-0 pt-4 px-4">
+                            <h5 class="modal-title fw-bold text-uppercase" id="applyModalLabel" style="color: #333; font-size: 1.1rem;">
+                                Ứng tuyển vị trí: {{ post.title }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body px-4 pb-4">
+                            <!-- Job Info Summary -->
+                            <div class="p-3 mb-4 rounded-3" style="background-color: #f8f9fa; border: 1px solid #eee;">
+                                <div class="d-flex align-items-start">
+                                    <div class="me-3" style="width: 60px; height: 60px;">
+                                        {% if post.recruiter.company.avatar_url %}
+                                            <img src="{{ post.recruiter.company.avatar_url }}" alt="{{ post.recruiter.company.name }}" class="img-fluid rounded border bg-white">
+                                        {% else %}
+                                            <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Company Logo" class="img-fluid rounded border bg-white">
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-dark">{{ post.recruiter.company.name }}</h6>
+                                        <p class="text-muted small mb-1">
+                                            <i class="fas fa-map-marker-alt me-1"></i> Địa điểm: {{ post.recruiter.company.location or 'Chưa cập nhật' }}
+                                        </p>
+                                        <p class="mb-0 small fw-semibold" style="color: #00b14f;">
+                                            <i class="fas fa-money-bill-wave me-1"></i> Mức lương: {{ post.salary_range or 'Thỏa thuận' }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Info -->
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <label class="form-label fw-semibold small text-muted text-uppercase">Số điện thoại</label>
+                                    <div {% if current_user.phone %}data-bs-toggle="tooltip" data-bs-placement="top" title="Vui lòng cập nhật thông tin trong hồ sơ cá nhân để thay đổi."{% endif %}>
+                                        <input type="text" name="phone" class="form-control form-control-lg {% if current_user.phone %}bg-light border-0{% else %}border{% endif %}" 
+                                               value="{{ current_user.phone or '' }}" 
+                                               placeholder="Nhập số điện thoại" 
+                                               style="font-size: 0.95rem;" 
+                                               required {% if current_user.phone %}readonly{% endif %}>
+                                    </div>
+                                    {% if not current_user.phone %}
+                                    <div class="form-text small text-info mt-1"><i class="fas fa-info-circle me-1"></i> Số điện thoại sẽ được lưu vào hồ sơ của bạn.</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-muted text-uppercase">Email liên hệ</label>
+                                    <div data-bs-toggle="tooltip" data-bs-placement="top" title="Thông tin được lấy từ hồ sơ cá nhân. Hãy chỉnh sửa trong đó.">
+                                        <input type="email" class="form-control form-control-lg bg-light border-0" value="{{ current_user.email }}" style="font-size: 0.95rem;" required readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CV Selection -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-3">Chọn CV để ứng tuyển</label>
+                                
+                                {% if cv and (cv.cv_url or cv.cv_content) %}
+                                <div class="form-check p-3 border rounded-3 mb-3 d-flex align-items-center" style="cursor: pointer; background-color: #fff;">
+                                    <input class="form-check-input ms-0 me-3" type="radio" name="cv_type" id="cvExisting" value="existing" checked>
+                                    <label class="form-check-label w-100 d-flex align-items-center" for="cvExisting" style="cursor: pointer;">
+                                        <i class="far fa-file-pdf fa-2x text-danger me-3"></i>
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ cv.title or 'CV hiện tại' }}</div>
+                                            <div class="text-muted small">Dùng hồ sơ đã lưu trên Job5ing</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                {% endif %}
+
+                                <div class="cv-upload-box border rounded-3 p-4 text-center" style="border-style: dashed !important; border-width: 2px !important; background-color: #fcfcfc;">
+                                    <input type="file" name="new_cv" id="new_cv" class="d-none" accept=".pdf,.doc,.docx">
+                                    <label for="new_cv" class="m-0" style="cursor: pointer;">
+                                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                        <div class="fw-bold text-dark">TẢI LÊN CV MỚI TỪ MÁY TÍNH</div>
+                                        <div class="text-muted small">Hỗ trợ định dạng .doc, .docx, .pdf (Dưới 5MB)</div>
+                                    </label>
+                                    <div id="file-name-display" class="mt-2 fw-semibold text-primary d-none"></div>
+                                </div>
+                            </div>
+
+                            <!-- Cover Letter -->
+                            <div class="mb-0">
+                                <label class="form-label fw-semibold small text-muted text-uppercase">Thư giới thiệu / Lời nhắn</label>
+                                <textarea name="cover_letter" class="form-control bg-light border-0" rows="4" placeholder="Giới thiệu ngắn gọn về kinh nghiệm và lý do bạn phù hợp với vị trí này..." style="font-size: 0.95rem;"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top-0 px-4 pb-4">
+                            <button type="button" class="btn px-4 py-2 fw-semibold" data-bs-dismiss="modal" style="color: #666; background: #eee;">HỦY BỎ</button>
+                            <button type="submit" class="btn px-4 py-2 fw-bold text-white shadow-sm" style="background-color: #1a237e;">GỬI HỒ SƠ ỨNG TUYỂN</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Initialize Bootstrap Tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+
+            document.getElementById('new_cv').addEventListener('change', function(e) {
+                const fileName = e.target.files[0] ? e.target.files[0].name : '';
+                const display = document.getElementById('file-name-display');
+                if (fileName) {
+                    display.textContent = 'Đã chọn: ' + fileName;
+                    display.classList.remove('d-none');
+                    // Nếu tải CV mới thì uncheck cái radio cũ (nếu có)
+                    const radio = document.getElementById('cvExisting');
+                    if (radio) radio.checked = false;
+                } else {
+                    display.classList.add('d-none');
+                }
+            });
+            
+            {% if cv %}
+            document.getElementById('cvExisting').addEventListener('change', function(e) {
+                if (this.checked) {
+                    document.getElementById('new_cv').value = '';
+                    document.getElementById('file-name-display').classList.add('d-none');
+                }
+            });
+            {% endif %}
+        </script>
 
         <div class="job-content-grid">
             <div class="job-main-column">

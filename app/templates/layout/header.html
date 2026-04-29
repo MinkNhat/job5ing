@@ -42,6 +42,7 @@
                         <li><a class="dropdown-item" href="{{ url_for('main.account') }}">Thông tin cá nhân</a></li>
                         {% if not current_user.is_employer %}
                             <li><a class="dropdown-item" href="{{ url_for('main.resume') }}">Quản lý CV</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.applied_jobs') }}">Việc làm đã ứng tuyển</a></li>
                         {% endif %}
                         {% if current_user.is_employer %}
                             <li><a class="dropdown-item" href="#">Chuyển sang tài khoản công ty</a></li>

@@ -108,7 +108,7 @@ class CompanyPostManagementTestCase(unittest.TestCase):
         self.login("recruiter@example.com", "Password123!")
         response = self.client.get("/recruiter/dashboard")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Danh sách tin đã đăng", response.get_data(as_text=True))
+        self.assertIn("Quản lý tin tuyển dụng", response.get_data(as_text=True))
         self.assertIn("Python Developer", response.get_data(as_text=True))
 
     def test_dashboard_access_denied_candidate(self):

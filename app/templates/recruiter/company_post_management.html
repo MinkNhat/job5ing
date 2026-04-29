@@ -6,6 +6,11 @@
 <div class="dashboard-page">
     <div class="container">
         
+        <div class="dashboard-top-header mb-4">
+            <h2 class="h3 font-weight-bold">Quản lý tin tuyển dụng</h2>
+            <button type="button" class="site-action-btn orange-btn mt-2" onclick="openJobModal()">+ Tạo tin mới</button>
+        </div>
+
         <!-- Thống kê Card -->
         <div class="row mb-4">
             <div class="col-md-4">
@@ -29,16 +34,11 @@
         </div>
 
         <div class="content-card">
-            <div class="dashboard-header d-flex justify-content-between align-items-center mb-4">
-                <h2 class="h4 font-weight-bold">Danh sách tin đã đăng ({{ pagination.total }})</h2>
-                <button type="button" class="site-action-btn primary" onclick="openJobModal()">+ Tạo tin mới</button>
-            </div>
-
             <!-- Toolbar Tìm kiếm & Lọc -->
             <div class="dashboard-toolbar mb-4">
-                <form class="toolbar-search d-flex gap-2" method="GET">
-                    <input type="text" name="q" placeholder="Tìm theo tiêu đề..." class="form-control" value="{{ request.args.get('q', '') }}">
-                    <select name="status" class="form-control" style="max-width: 200px;">
+                <form class="toolbar-search d-flex" method="GET" style="gap: 10px;">
+                    <input type="text" name="q" placeholder="Tìm theo tiêu đề..." class="form-control search-input" value="{{ request.args.get('q', '') }}">
+                    <select name="status" class="form-control status-select">
                         <option value="">Tất cả trạng thái</option>
                         <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Đang hiển thị</option>
                         <option value="closed" {% if request.args.get('status') == 'closed' %}selected{% endif %}>Đã đóng</option>
@@ -47,7 +47,7 @@
                     </select>
                     <button type="submit" class="btn-filter"><i class="fas fa-search"></i> Lọc</button>
                     {% if request.args.get('q') or request.args.get('status') %}
-                        <a href="{{ url_for('recruiter.dashboard') }}" class="reset-filter-btn">Xóa lọc</a>
+                        <a href="{{ url_for('recruiter.dashboard') }}" class="reset-filter-btn" style="white-space: nowrap; align-self: center;">Xóa lọc</a>
                     {% endif %}
                 </form>
             </div>
@@ -181,7 +181,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" onclick="closeJobModal()">Hủy</button>
-                <button type="submit" class="site-action-btn primary">Lưu thông tin</button>
+                <button type="submit" class="site-action-btn dark-btn">Lưu thông tin</button>
             </div>
         </form>
     </div>
@@ -248,5 +248,59 @@ window.onclick = function(e) { if(e.target == document.getElementById('jobModal'
 .pagination { justify-content: center; gap: 5px; }
 .page-link { border-radius: 8px !important; color: #245d94; }
 .page-item.active .page-link { background: #245d94; border-color: #245d94; }
+
+/* Dashboard UI Improvements */
+.site-action-btn.orange-btn {
+    background: #ff9550 !important;
+    color: #fff !important;
+    border: none;
+}
+.site-action-btn.orange-btn:hover {
+    background: #ff8740 !important;
+    color: #fff !important;
+    transform: translateY(-2px);
+}
+
+.toolbar-search .form-control, 
+.toolbar-search .btn-filter {
+    height: 45px;
+    border-radius: 10px;
+}
+
+.toolbar-search .search-input {
+    flex: 0 0 60%;
+}
+
+.toolbar-search .status-select {
+    flex: 0 0 30%;
+}
+
+.toolbar-search .btn-filter {
+    flex: 0 0 10%;
+    background: #ff9550; 
+    color: white;
+    border: none;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.toolbar-search .btn-filter:hover {
+    background: #ff8740;
+}
+
+@media (max-width: 768px) {
+    .toolbar-search {
+        flex-direction: column;
+    }
+    .toolbar-search .search-input,
+    .toolbar-search .status-select,
+    .toolbar-search .btn-filter {
+        flex: 0 0 100%;
+        width: 100%;
+    }
+}
 </style>
 {% endblock %}
