@@ -18,6 +18,35 @@ from docx import Document
 
 from app import db
 from app.models import User, CV
+from app.models import User, CV, Post, PostReport
+
+def submit_post_report(user, post_id, reason, description):
+    post = db.session.get(Post, post_id)
+    if not post:
+        return False, "Không tìm thấy tin tuyển dụng."
+
+    # Kiểm tra xem user này đã báo cáo tin này chưa (để tránh spam)
+    existing_report = PostReport.query.filter_by(user_id=user.id, post_id=post_id, is_resolved=False).first()
+    if existing_report:
+        return False, "Bạn đã gửi báo cáo cho tin tuyển dụng này và đang chờ xử lý."
+
+    try:
+        new_report = PostReport(
+            user_id=user.id,
+            post_id=post_id,
+            reason=reason,
+            description=description
+        )
+        db.session.add(new_report)
+
+        # Đánh dấu tin bị báo cáo để Admin dễ thấy
+        post.is_reported = True
+
+        db.session.commit()
+        return True, "Cảm ơn bạn! Báo cáo của bạn đã được gửi tới Ban quản trị."
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Lỗi hệ thống khi gửi báo cáo: {str(e)}"
 
 EMAIL_PATTERN = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 PASSWORD_STRENGTH_PATTERN = re.compile(
@@ -153,6 +182,19 @@ def update_account_profile(user, form_data, files=None):
     user.sex = (form_data.get("sex") or "").strip() or None
     user.avatar_url = avatar_url or None
     user.date_of_birth = date_of_birth
+
+    # --- Xử lý CV ---
+    # Lấy hoặc tạo CV cho user (giả sử mỗi user có 1 CV chính hiển thị trong profile)
+    cv = CV.query.filter_by(user_id=user.id).first()
+    if not cv:
+        cv = CV(user_id=user.id)
+        db.session.add(cv)
+
+    cv.title = (form_data.get("cv_title") or "").strip() or None
+    cv.summary = (form_data.get("cv_summary") or "").strip() or None
+    cv.education = (form_data.get("cv_education") or "").strip() or None
+    cv.skills = (form_data.get("cv_skills") or "").strip() or None
+    cv.experience = (form_data.get("cv_experience") or "").strip() or None
 
     try:
         db.session.commit()

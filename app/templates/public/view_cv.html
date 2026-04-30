@@ -1,0 +1,184 @@
+{% extends "base_public.html" %}
+
+{% block title %}Chi tiết hồ sơ - {{ application.cv.user.last_name }} {{ application.cv.user.first_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cv-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+        margin-bottom: 40px;
+    }
+    .cv-sidebar {
+        background: #f8f9fa;
+        padding: 40px 30px;
+        border-right: 1px solid #eee;
+    }
+    .cv-main {
+        padding: 40px 50px;
+    }
+    .profile-img {
+        width: 120px;
+        height: 120px;
+        border-radius: 15px;
+        object-fit: cover;
+        margin-bottom: 20px;
+        background: #dee2e6;
+    }
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #eee;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+    .info-value {
+        color: #1a1a1a;
+        margin-bottom: 20px;
+    }
+    .ai-score-floating {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        z-index: 1000;
+        border: 2px solid #6f42c1;
+        width: 250px;
+    }
+    .skill-tag {
+        display: inline-block;
+        background: #e9ecef;
+        padding: 5px 12px;
+        border-radius: 20px;
+        margin: 0 5px 10px 0;
+        font-size: 0.85rem;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.manage_candidates', post_id=application.post_id) }}" class="text-decoration-none">Quay lại danh sách</a></li>
+            <li class="breadcrumb-item active">Chi tiết hồ sơ</li>
+        </ol>
+    </nav>
+
+    <div class="cv-container">
+        <div class="row g-0">
+            <!-- Sidebar: Personal Info -->
+            <div class="col-lg-4 cv-sidebar">
+                <div class="text-center mb-4">
+                    {% if application.cv.user.avatar_url %}
+                    <img src="{{ application.cv.user.avatar_url }}" alt="Avatar" class="profile-img shadow-sm">
+                    {% else %}
+                    <div class="profile-img d-flex align-items-center justify-content-center mx-auto shadow-sm">
+                        <i class="fas fa-user fa-3x text-white"></i>
+                    </div>
+                    {% endif %}
+                    <h4 class="fw-bold mb-1">{{ application.cv.user.last_name }} {{ application.cv.user.first_name }}</h4>
+                    <p class="text-muted">{{ application.cv.title or 'Ứng viên' }}</p>
+                </div>
+
+                <div class="mt-5">
+                    <div class="info-label"><i class="fas fa-envelope me-2"></i>Email</div>
+                    <div class="info-value">{{ application.cv.user.email }}</div>
+
+                    <div class="info-label"><i class="fas fa-phone me-2"></i>Số điện thoại</div>
+                    <div class="info-value">{{ application.cv.user.phone or 'Chưa cập nhật' }}</div>
+
+                    <div class="info-label"><i class="fas fa-map-marker-alt me-2"></i>Địa chỉ</div>
+                    <div class="info-value">{{ application.cv.user.address or 'Chưa cập nhật' }}</div>
+
+                    <div class="info-label"><i class="fas fa-venus-mars me-2"></i>Giới tính</div>
+                    <div class="info-value">{{ application.cv.user.sex or 'N/A' }}</div>
+                </div>
+
+                <div class="mt-4 pt-4 border-top">
+                    <div class="info-label">Trạng thái ứng tuyển</div>
+                    <form action="{{ url_for('main.change_app_status') }}" method="POST">
+                        <input type="hidden" name="application_id" value="{{ application.id }}">
+                        <select name="status" class="form-select fw-bold mb-3" onchange="this.form.submit()">
+                            <option value="RECEIVED" {{ 'selected' if application.status == 'RECEIVED' }}>RECEIVED</option>
+                            <option value="INTERVIEW" {{ 'selected' if application.status == 'INTERVIEW' }}>INTERVIEW</option>
+                            <option value="APPROVED" {{ 'selected' if application.status == 'APPROVED' }}>APPROVED</option>
+                            <option value="REJECT" {{ 'selected' if application.status == 'REJECT' }}>REJECT</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Main Content: Experience & Education -->
+            <div class="col-lg-8 cv-main">
+                <div class="mb-5">
+                    <h5 class="section-title"><i class="fas fa-info-circle text-primary"></i> Giới thiệu bản thân</h5>
+                    <p class="text-secondary" style="line-height: 1.8; white-space: pre-line;">
+                        {{ application.cv.summary or 'Chưa có thông tin giới thiệu.' }}
+                    </p>
+                </div>
+
+                <div class="mb-5">
+                    <h5 class="section-title"><i class="fas fa-briefcase text-primary"></i> Kinh nghiệm làm việc</h5>
+                    <p class="text-secondary" style="line-height: 1.8; white-space: pre-line;">
+                        {{ application.cv.experience or 'Chưa cập nhật kinh nghiệm.' }}
+                    </p>
+                </div>
+
+                <div class="mb-5">
+                    <h5 class="section-title"><i class="fas fa-graduation-cap text-primary"></i> Học vấn</h5>
+                    <p class="text-secondary" style="line-height: 1.8; white-space: pre-line;">
+                        {{ application.cv.education or 'Chưa cập nhật học vấn.' }}
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <h5 class="section-title"><i class="fas fa-tools text-primary"></i> Kỹ năng chuyên môn</h5>
+                    <div>
+                        {% if application.cv.skills %}
+                            {% for skill in application.cv.skills.split(',') %}
+                                <span class="skill-tag">{{ skill.strip() }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">Chưa cập nhật kỹ năng.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Score Floating Box -->
+    <div class="ai-score-floating text-center">
+        <h6 class="fw-bold mb-3">Phân tích bởi AI</h6>
+        <div class="position-relative d-inline-block mb-3">
+            <svg width="100" height="100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#eee" stroke-width="8"></circle>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#6f42c1" stroke-width="8"
+                        stroke-dasharray="{{ application.ai_score * 2.82 }} 282"
+                        transform="rotate(-90 50 50)"></circle>
+            </svg>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; font-weight: 800; color: #6f42c1;">
+                {{ application.ai_score }}%
+            </div>
+        </div>
+        <p class="small text-muted mb-0">Độ phù hợp với vị trí<br><strong>{{ application.post.title }}</strong></p>
+    </div>
+</div>
+{% endblock %}

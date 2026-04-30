@@ -17,7 +17,7 @@ class Company(db.Model):
     description = db.Column(db.Text)
     is_approved = db.Column(db.Boolean, default=False)
     avatar_url = db.Column(db.String(255))
-    business_license = db.Column(db.String(255), nullable=False)
+    business_license = db.Column(db.String(255), nullable=True)
 
     recruiters = db.relationship('Recruiter', backref='company', lazy=True)
 
@@ -146,6 +146,34 @@ class Post(db.Model):
     last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
 
     applications = db.relationship('Application', backref='post', lazy=True)
+    reports = db.relationship('PostReport', backref='post', lazy=True, cascade="all, delete-orphan")
+
+
+# =========================
+# POST REPORT
+# =========================
+class PostReport(db.Model):
+    __tablename__ = 'post_report'
+
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(
+        db.Integer,
+        db.ForeignKey('post.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    
+    reason = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    is_resolved = db.Column(db.Boolean, default=False)
+
+    user = db.relationship('User', backref='reports_sent')
 
 
 # =========================
@@ -169,6 +197,7 @@ class Application(db.Model):
     )
 
     applied_at = db.Column(db.DateTime, default=db.func.now())
+    ai_score = db.Column(db.Integer, default=0)
 
     status = db.Column(
         db.Enum('RECEIVED', 'INTERVIEW', 'APPROVED', 'REJECT'),
@@ -180,6 +209,32 @@ class Application(db.Model):
     __table_args__ = (
         db.UniqueConstraint('cv_id', 'post_id', name='uq_app_cv_post'),
     )
+
+    # Relationships
+    history = db.relationship('ApplicationStatusHistory', backref='application', lazy=True, cascade="all, delete-orphan")
+
+
+# =========================
+# APPLICATION STATUS HISTORY
+# =========================
+class ApplicationStatusHistory(db.Model):
+    __tablename__ = 'application_status_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    application_id = db.Column(
+        db.Integer,
+        db.ForeignKey('application.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    old_status = db.Column(db.String(50))
+    new_status = db.Column(db.String(50), nullable=False)
+    changed_at = db.Column(db.DateTime, default=db.func.now())
+    changed_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True
+    )
+    notes = db.Column(db.Text)
 
 
 # =========================

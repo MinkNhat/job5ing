@@ -55,24 +55,114 @@
     <div class="row">
         <div class="col-md-8">
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3 border-0">
-                    <h5 class="mb-0 fw-bold">Thông báo hệ thống</h5>
-                </div>
-                <div class="card-body p-4">
-                    {% if stats.pending_companies > 0 %}
-                    <div class="alert alert-warning border-0 d-flex align-items-center mb-3">
-                        <div class="flex-grow-1">
-                            <strong>{{ stats.pending_companies }} Công ty đang chờ duyệt!</strong>
-                            <div class="small">Vui lòng kiểm tra danh sách doanh nghiệp mới đăng ký.</div>
+                <form action="{{ url_for('admin_panel.delete_notifications') }}" method="POST" id="notificationForm">
+                    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">Thông báo hệ thống</h5>
+                        <div id="batchActions" style="display: none;">
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash me-1"></i> Xóa đã chọn
+                            </button>
                         </div>
-                        <a href="{{ url_for('admin_panel.companies', status='pending') }}" class="btn btn-sm btn-warning ms-3">Xem ngay</a>
                     </div>
-                    {% else %}
-                    <p class="text-muted mb-0 italic">Hiện không có yêu cầu phê duyệt mới nào.</p>
-                    {% endif %}
-                </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <tbody>
+                                    {# Kiểm tra xem có bất kỳ nội dung nào để hiển thị không #}
+                                    {% set has_notifs = stats.notifications|length > 0 %}
+                                    {% set has_pending = stats.pending_companies > 0 %}
+
+                                    {% if not has_notifs and not has_pending %}
+                                        <tr>
+                                            <td colspan="3" class="text-center py-5 text-muted">
+                                                <i class="fas fa-bell-slash d-block mb-2" style="font-size: 2rem;"></i>
+                                                Hiện không có thông báo nào.
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        {# 1. Hiển thị các thông báo từ bảng notification #}
+                                        {% for notif in stats.notifications %}
+                                        <tr>
+                                            <td style="width: 40px;" class="ps-4">
+                                                <input type="checkbox" name="notification_ids" value="{{ notif.id }}" class="form-check-input notif-checkbox">
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0 me-3">
+                                                        {% if notif.type == 'APPLICATION_STATUS_CHANGED' %}
+                                                            <div class="bg-info-light text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;"><i class="fas fa-file-alt"></i></div>
+                                                        {% elif notif.type == 'INTERVIEW_INVITATION' %}
+                                                            <div class="bg-primary-light text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;"><i class="fas fa-calendar-check"></i></div>
+                                                        {% elif notif.type == 'NEW_APPLICATION' %}
+                                                            <div class="bg-warning-light text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;"><i class="fas fa-user-plus"></i></div>
+                                                        {% elif notif.type == 'ACCOUNT_APPROVED' %}
+                                                            <div class="bg-success-light text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;"><i class="fas fa-check-circle"></i></div>
+                                                        {% elif notif.type == 'POST_BLOCKED' %}
+                                                            <div class="bg-danger-light text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;"><i class="fas fa-ban"></i></div>
+                                                        {% else %}
+                                                            <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;"><i class="fas fa-bell"></i></div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <div class="fw-bold">{{ notif.content }}</div>
+                                                        <small class="text-muted">{{ notif.created_at.strftime('%H:%M %d/%m/%Y') }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                <button type="button" class="btn-close small" onclick="deleteSingle('{{ notif.id }}')"></button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        
+                                        {# 2. Hiển thị cảnh báo công ty chờ duyệt (nếu có) #}
+                                        {% if has_pending %}
+                                        <tr class="table-warning">
+                                            <td class="ps-4" style="width: 40px;"><i class="fas fa-exclamation-triangle text-warning"></i></td>
+                                            <td>
+                                                <div class="fw-bold text-dark">{{ stats.pending_companies }} Công ty đang chờ duyệt!</div>
+                                                <div class="small text-muted">Vui lòng kiểm tra danh sách doanh nghiệp mới đăng ký.</div>
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                <a href="{{ url_for('admin_panel.companies', status='pending') }}" class="btn btn-sm btn-warning fw-bold">Xem ngay</a>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
+
+<script>
+    // Logic ẩn hiện nút xóa hàng loạt
+    const checkboxes = document.querySelectorAll('.notif-checkbox');
+    const batchActions = document.getElementById('batchActions');
+    
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            const checkedCount = document.querySelectorAll('.notif-checkbox:checked').length;
+            batchActions.style.display = checkedCount > 0 ? 'block' : 'none';
+        });
+    });
+
+    // Hàm xóa nhanh 1 cái bằng cách tự tick rồi submit
+    function deleteSingle(id) {
+        if(confirm('Bạn có chắc muốn xóa thông báo này?')) {
+            // Bỏ tick tất cả
+            checkboxes.forEach(cb => cb.checked = false);
+            // Tick cái cần xóa
+            const target = document.querySelector(`input[value="${id}"]`);
+            if(target) {
+                target.checked = true;
+                document.getElementById('notificationForm').submit();
+            }
+        }
+    }
+</script>
         
         <div class="col-md-4">
             <div class="card border-0 shadow-sm">

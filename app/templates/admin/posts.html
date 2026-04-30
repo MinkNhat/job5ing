@@ -92,6 +92,13 @@
                     <!-- ACTION -->
                     <td>
                         <div class="d-flex gap-2">
+                            {% if p.is_reported %}
+                                <a href="{{ url_for('admin_panel.view_post_reports', post_id=p.id) }}" 
+                                   class="btn btn-sm btn-outline-danger" title="Xem báo cáo chi tiết">
+                                    <i class="fas fa-flag"></i> Báo cáo
+                                </a>
+                            {% endif %}
+
                             <form method="post" action="{{ url_for('admin_panel.change_post_status', post_id=p.id, **request.args) }}" style="margin:0;">
                                 <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                                     <option value="ACTIVE" {% if p.status == 'ACTIVE' %}selected{% endif %}>Hoạt động</option>

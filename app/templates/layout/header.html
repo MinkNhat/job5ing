@@ -45,6 +45,7 @@
                             <li><a class="dropdown-item" href="{{ url_for('main.applied_jobs') }}">Việc làm đã ứng tuyển</a></li>
                         {% endif %}
                         {% if current_user.is_employer %}
+                            <li><a class="dropdown-item" href="{{ url_for('main.recruiter_posts') }}">Chuyển sang tài khoản công ty</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('recruiter.index') }}">Chuyển sang tài khoản công ty</a></li>
                         {% endif %}
                         <li><hr class="dropdown-divider"></li>

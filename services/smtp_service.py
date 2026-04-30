@@ -51,3 +51,38 @@ def send_approval_email(user_email, company_name):
     </html>
     """
     return send_email(user_email, subject, body)
+
+def send_application_status_email(user_email, user_name, job_title, company_name, new_status):
+    status_map = {
+        'RECEIVED': 'Đang chờ duyệt',
+        'INTERVIEW': 'Hẹn phỏng vấn',
+        'APPROVED': 'Đồng ý tuyển dụng',
+        'REJECT': 'Từ chối hồ sơ'
+    }
+    
+    status_text = status_map.get(new_status, new_status)
+    subject = f"[Job5ing] Thông báo trạng thái ứng tuyển: {job_title}"
+    
+    content = ""
+    if new_status == 'INTERVIEW':
+        content = f"<p>Chúng tôi rất ấn tượng với hồ sơ của bạn và muốn mời bạn tham gia buổi phỏng vấn cho vị trí <strong>{job_title}</strong>.</p><p>Chúng tôi sẽ liên hệ với bạn sớm nhất để sắp xếp thời gian cụ thể.</p>"
+    elif new_status == 'APPROVED':
+        content = f"<p>Chúc mừng! Bạn đã vượt qua các vòng tuyển dụng và chúng tôi đồng ý nhận bạn vào vị trí <strong>{job_title}</strong>.</p><p>Chào mừng bạn gia nhập đội ngũ của chúng tôi!</p>"
+    elif new_status == 'REJECT':
+        content = f"<p>Cảm ơn bạn đã quan tâm đến vị trí <strong>{job_title}</strong> tại công ty chúng tôi. Tuy nhiên, tại thời điểm này, chúng tôi nhận thấy hồ sơ của bạn chưa thực sự phù hợp với yêu cầu công việc.</p><p>Chúc bạn sớm tìm được cơ hội công việc phù hợp khác.</p>"
+    else:
+        content = f"<p>Trạng thái hồ sơ của bạn cho vị trí <strong>{job_title}</strong> đã được cập nhật thành: <strong>{status_text}</strong>.</p>"
+
+    body = f"""
+    <html>
+        <body>
+            <p>Xin chào <strong>{user_name}</strong>,</p>
+            {content}
+            <p>Thông tin công ty: <strong>{company_name}</strong></p>
+            <br>
+            <p>Trân trọng,<br>Hệ thống tuyển dụng Job5ing</p>
+        </body>
+    </html>
+    """
+    return send_email(user_email, subject, body)
+

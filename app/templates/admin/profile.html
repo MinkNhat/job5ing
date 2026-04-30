@@ -13,9 +13,13 @@
 
         <div class="row g-4">
             <div class="col-lg-4">
-                <div class="profile-summary-card h-100">
-                    <div class="profile-avatar">
-                        {{ (user.first_name or user.email or 'A')[:1]|upper }}
+                <div class="profile-summary-card h-100 text-center p-4">
+                    <div class="profile-avatar mb-3" style="width: 120px; height: 120px; margin: 0 auto; border-radius: 50%; overflow: hidden; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #666; border: 3px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        {% if user.avatar_url %}
+                            <img src="{{ user.avatar_url }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            {{ (user.first_name or user.email or 'A')[:1]|upper }}
+                        {% endif %}
                     </div>
                     <h6 class="fw-bold mb-1">{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or 'Quản trị viên' }}</h6>
                     <p class="text-muted small mb-3">{{ user.email }}</p>
@@ -27,17 +31,17 @@
                             <span class="badge-status-inactive">Đã khóa</span>
                         {% endif %}
                     </div>
-                    <div class="profile-meta mt-4 text-start">
-                        <div class="profile-meta-row">
-                            <span class="profile-meta-label">Mã tài khoản</span>
+                    <div class="profile-meta mt-4 text-start pt-3 border-top">
+                        <div class="profile-meta-row d-flex justify-content-between mb-2">
+                            <span class="profile-meta-label text-muted">Mã tài khoản:</span>
                             <strong>#{{ user.id }}</strong>
                         </div>
-                        <div class="profile-meta-row">
-                            <span class="profile-meta-label">Loại tài khoản</span>
+                        <div class="profile-meta-row d-flex justify-content-between mb-2">
+                            <span class="profile-meta-label text-muted">Loại:</span>
                             <strong>Quản trị viên</strong>
                         </div>
-                        <div class="profile-meta-row">
-                            <span class="profile-meta-label">Điện thoại</span>
+                        <div class="profile-meta-row d-flex justify-content-between">
+                            <span class="profile-meta-label text-muted">Điện thoại:</span>
                             <strong>{{ user.phone or 'Chưa cập nhật' }}</strong>
                         </div>
                     </div>
@@ -45,31 +49,8 @@
             </div>
 
             <div class="col-lg-8">
-                <form method="post" class="row g-3">
+                <form method="post" class="row g-3" enctype="multipart/form-data">
                     <div class="col-md-6">
-                        <label for="email" class="form-label">Email</label>
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            class="form-control"
-                            value="{{ request.form.get('email', user.email) }}"
-                            required
-                        >
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="first_name" class="form-label">Tên</label>
-                        <input
-                            type="text"
-                            id="first_name"
-                            name="first_name"
-                            class="form-control"
-                            value="{{ request.form.get('first_name', user.first_name or '') }}"
-                        >
-                    </div>
-
-                    <div class="col-md-3">
                         <label for="last_name" class="form-label">Họ</label>
                         <input
                             type="text"
@@ -77,7 +58,33 @@
                             name="last_name"
                             class="form-control"
                             value="{{ request.form.get('last_name', user.last_name or '') }}"
+                            required
                         >
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="first_name" class="form-label">Tên</label>
+                        <input
+                            type="text"
+                            id="first_name"
+                            name="first_name"
+                            class="form-control"
+                            value="{{ request.form.get('first_name', user.first_name or '') }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-md-12">
+                        <label for="email" class="form-label">Email</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            class="form-control"
+                            value="{{ user.email }}"
+                            readonly
+                        >
+                        <small class="text-muted">Email quản trị viên không được phép thay đổi tại đây.</small>
                     </div>
 
                     <div class="col-md-6">
@@ -102,17 +109,6 @@
                         </select>
                     </div>
 
-                    <div class="col-md-12">
-                        <label for="avatar_url" class="form-label">Ảnh đại diện (URL)</label>
-                        <input
-                            type="text"
-                            id="avatar_url"
-                            name="avatar_url"
-                            class="form-control"
-                            value="{{ request.form.get('avatar_url', user.avatar_url or '') }}"
-                        >
-                    </div>
-
                     <div class="col-12">
                         <label for="address" class="form-label">Địa chỉ</label>
                         <textarea
@@ -123,8 +119,24 @@
                         >{{ request.form.get('address', user.address or '') }}</textarea>
                     </div>
 
-                    <div class="col-12 d-flex justify-content-end">
-                        <button type="submit" class="btn btn-filter">Lưu hồ sơ</button>
+                    <div class="col-12">
+                        <label for="avatar" class="form-label">Ảnh đại diện</label>
+                        <input
+                            type="file"
+                            id="avatar"
+                            name="avatar"
+                            class="form-control"
+                            accept="image/*"
+                        >
+                        {% if user.avatar_url %}
+                            <div class="mt-2">
+                                <small class="text-muted">Ảnh hiện tại: <a href="{{ user.avatar_url }}" target="_blank">Xem ảnh</a></small>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-filter btn-primary px-4">Lưu hồ sơ</button>
                     </div>
                 </form>
             </div>

@@ -24,8 +24,9 @@ from .services import (
     preview_resume,
     save_resume,
     validate_tax_code,
+    submit_post_report,
 )
-from app.models import Company, Post, Recruiter, User, Application, Notification, CV
+from app.models import Company, Post, Recruiter, User, Application, Notification, CV, ApplicationStatusHistory
 from app import db
 
 main_bp = Blueprint("main", __name__)
@@ -117,8 +118,8 @@ def recruiter_request():
         return redirect(url_for("main.login"))
     
     companies = Company.query.all()
-    return render_template("auth/recruiter_request.html", 
-                           companies=companies, 
+    return render_template("auth/recruiter_request.html",
+                           companies=companies,
                            scale_options=COMPANY_SCALE_OPTIONS,
                            locations=HOME_LOCATIONS)
 
@@ -258,6 +259,7 @@ def login():
         flash(message, "success" if success else "danger")
         if success:
             return redirect(url_for("main.index"))
+        flash(message, "danger")
 
     return render_template(
         "auth/login.html",
@@ -339,10 +341,10 @@ def google_callback():
         target_is_employer = session.pop("google_is_employer", False)
         
         success, message = login_with_google_profile(profile)
-        
+
         if success and target_is_employer:
             user = User.query.filter_by(email=profile.get("email").lower()).first()
-            if user:
+            if target_is_employer and user:
                 user.is_employer = True
                 db.session.commit()
                 # Cập nhật lại session role
@@ -350,8 +352,13 @@ def google_callback():
                 flash("Đăng ký tài khoản nhà tuyển dụng qua Google thành công.", "success")
                 return redirect(url_for("main.recruiter_request"))
 
-        flash(message, "success" if success else "danger")
-        return redirect(url_for("main.index" if success else "main.login"))
+            flash(message, "success")
+            if user and user.is_admin:
+                return redirect(url_for("admin_panel.index"))
+            return redirect(url_for("main.index"))
+
+        flash(message, "danger")
+        return redirect(url_for("main.login"))
     except (HTTPError, URLError, KeyError, SQLAlchemyError, json.JSONDecodeError):
         from app import db
 
@@ -364,6 +371,126 @@ def google_callback():
 def logout():
     session.clear()
     flash("Bạn đã đăng xuất.", "success")
+    return redirect(url_for("main.index"))
+
+
+from .recruiter_services import calculate_ai_score, get_applications_for_post, update_application_status
+
+@main_bp.route("/my-company/posts")
+def recruiter_posts():
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
+        return redirect(url_for("main.login"))
+
+    recruiter = Recruiter.query.filter_by(user_id=user.id).first()
+    if not recruiter or not recruiter.company_id:
+        flash("Tài khoản của bạn chưa liên kết với công ty nào.", "warning")
+        return redirect(url_for("main.recruiter_request"))
+
+    # Lấy tất cả bài đăng của công ty đó
+    posts = Post.query.filter(Post.recruiter.has(company_id=recruiter.company_id)).order_by(Post.created_at.desc()).all()
+
+    return render_template("public/company_posts.html", posts=posts, company=recruiter.company)
+
+@main_bp.route("/manage-candidates/<int:post_id>")
+def manage_candidates(post_id):
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
+        return redirect(url_for("main.login"))
+
+    post = Post.query.get_or_404(post_id)
+
+    # Lấy thông tin recruiter của user hiện tại và recruiter tạo tin
+    current_recruiter = Recruiter.query.filter_by(user_id=user.id).first()
+    post_recruiter = Recruiter.query.filter_by(user_id=post.recruiter_id).first()
+
+    # Kiểm tra: Phải cùng công ty mới được quản lý
+    if not current_recruiter or not post_recruiter or current_recruiter.company_id != post_recruiter.company_id:
+        flash("Bạn không có quyền quản lý tin này (không thuộc cùng công ty).", "danger")
+        return redirect(url_for("main.index"))
+
+    status_filter = request.args.get("status")
+    sort_by_ai = request.args.get("sort_by_ai") == "1"
+    page = request.args.get("page", 1, type=int)
+
+    query = get_applications_for_post(post_id, status_filter, sort_by_ai)
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+
+    # Tính toán thống kê chính xác cho từng trạng thái
+    stats = {
+        "all": Application.query.filter_by(post_id=post_id).count(),
+        "received": Application.query.filter_by(post_id=post_id, status='RECEIVED').count(),
+        "interview": Application.query.filter_by(post_id=post_id, status='INTERVIEW').count(),
+        "approved": Application.query.filter_by(post_id=post_id, status='APPROVED').count(),
+        "reject": Application.query.filter_by(post_id=post_id, status='REJECT').count(),
+    }
+
+    return render_template(
+        "public/manage_candidates.html",
+        post=post,
+        pagination=pagination,
+        stats=stats,
+        current_status=status_filter,
+        is_sorted_ai=sort_by_ai
+    )
+
+@main_bp.route("/api/calculate-scores/<int:post_id>", methods=["POST"])
+def run_ai_screening(post_id):
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        return {"error": "Unauthorized"}, 401
+
+    post = Post.query.get_or_404(post_id)
+    for app in post.applications:
+        app.ai_score = calculate_ai_score(app.cv_id, post_id)
+
+    db.session.commit()
+    flash("Đã hoàn tất sàng lọc hồ sơ bằng AI.", "success")
+    return redirect(url_for("main.manage_candidates", post_id=post_id, sort_by_ai=1))
+
+@main_bp.route("/api/update-app-status", methods=["POST"])
+def change_app_status():
+    app_id = request.form.get("application_id")
+    new_status = request.form.get("status")
+    if update_application_status(app_id, new_status):
+        flash("Cập nhật trạng thái thành công.", "success")
+    else:
+        flash("Lỗi khi cập nhật trạng thái.", "danger")
+    return redirect(request.referrer)
+
+@main_bp.route("/manage-candidates/view-cv/<int:application_id>")
+def view_candidate_cv(application_id):
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
+        return redirect(url_for("main.login"))
+
+    application = Application.query.get_or_404(application_id)
+
+    # Kiểm tra quyền sở hữu bài đăng
+    if application.post.recruiter_id != user.id:
+        flash("Bạn không có quyền xem hồ sơ này.", "danger")
+        return redirect(url_for("main.index"))
+
+    return render_template("public/view_cv.html", application=application)
+
+@main_bp.route("/posts/<int:post_id>/report", methods=["POST"])
+def report_post(post_id):
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+
+    reason = request.form.get("reason")
+    description = request.form.get("description", "").strip()
+
+    if not reason:
+        flash("Vui lòng chọn lý do báo cáo.", "danger")
+        return redirect(url_for("main.index"))
+
+    success, message = submit_post_report(user, post_id, reason, description)
+    flash(message, "success" if success else "danger")
     return redirect(url_for("main.index"))
 
 
@@ -483,7 +610,16 @@ def apply_job(post_id):
     cover_letter = request.form.get("cover_letter")
     application = Application(cv_id=cv.id, post_id=post.id, cover_letter=cover_letter)
     db.session.add(application)
-    
+    db.session.flush() # Lấy ID của application
+
+    # Ghi lại lịch sử ban đầu
+    history = ApplicationStatusHistory(
+        application_id=application.id,
+        new_status='RECEIVED',
+        notes="Ứng viên nộp hồ sơ trực tuyến."
+    )
+    db.session.add(history)
+
     # Notify recruiter
     notification = Notification(
         user_id=post.recruiter_id,
@@ -517,3 +653,123 @@ def applied_jobs():
         applications = Application.query.filter_by(cv_id=cv.id).order_by(Application.applied_at.desc()).all()
         
     return render_template("candidate/applied_jobs.html", applications=applications)
+
+
+from .recruiter_services import calculate_ai_score, get_applications_for_post, update_application_status
+
+@main_bp.route("/my-company/posts")
+def recruiter_posts():
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
+        return redirect(url_for("main.login"))
+
+    recruiter = Recruiter.query.filter_by(user_id=user.id).first()
+    if not recruiter or not recruiter.company_id:
+        flash("Tài khoản của bạn chưa liên kết với công ty nào.", "warning")
+        return redirect(url_for("main.recruiter_request"))
+
+    # Lấy tất cả bài đăng của công ty đó
+    posts = Post.query.filter(Post.recruiter.has(company_id=recruiter.company_id)).order_by(Post.created_at.desc()).all()
+
+    return render_template("public/company_posts.html", posts=posts, company=recruiter.company)
+
+@main_bp.route("/manage-candidates/<int:post_id>")
+def manage_candidates(post_id):
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
+        return redirect(url_for("main.login"))
+
+    post = Post.query.get_or_404(post_id)
+
+    # Lấy thông tin recruiter của user hiện tại và recruiter tạo tin
+    current_recruiter = Recruiter.query.filter_by(user_id=user.id).first()
+    post_recruiter = Recruiter.query.filter_by(user_id=post.recruiter_id).first()
+
+    # Kiểm tra: Phải cùng công ty mới được quản lý
+    if not current_recruiter or not post_recruiter or current_recruiter.company_id != post_recruiter.company_id:
+        flash("Bạn không có quyền quản lý tin này (không thuộc cùng công ty).", "danger")
+        return redirect(url_for("main.index"))
+
+    status_filter = request.args.get("status")
+    sort_by_ai = request.args.get("sort_by_ai") == "1"
+    page = request.args.get("page", 1, type=int)
+
+    query = get_applications_for_post(post_id, status_filter, sort_by_ai)
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+
+    # Tính toán thống kê chính xác cho từng trạng thái
+    stats = {
+        "all": Application.query.filter_by(post_id=post_id).count(),
+        "received": Application.query.filter_by(post_id=post_id, status='RECEIVED').count(),
+        "interview": Application.query.filter_by(post_id=post_id, status='INTERVIEW').count(),
+        "approved": Application.query.filter_by(post_id=post_id, status='APPROVED').count(),
+        "reject": Application.query.filter_by(post_id=post_id, status='REJECT').count(),
+    }
+
+    return render_template(
+        "public/manage_candidates.html",
+        post=post,
+        pagination=pagination,
+        stats=stats,
+        current_status=status_filter,
+        is_sorted_ai=sort_by_ai
+    )
+
+@main_bp.route("/api/calculate-scores/<int:post_id>", methods=["POST"])
+def run_ai_screening(post_id):
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        return {"error": "Unauthorized"}, 401
+
+    post = Post.query.get_or_404(post_id)
+    for app in post.applications:
+        app.ai_score = calculate_ai_score(app.cv_id, post_id)
+
+    db.session.commit()
+    flash("Đã hoàn tất sàng lọc hồ sơ bằng AI.", "success")
+    return redirect(url_for("main.manage_candidates", post_id=post_id, sort_by_ai=1))
+
+@main_bp.route("/api/update-app-status", methods=["POST"])
+def change_app_status():
+    app_id = request.form.get("application_id")
+    new_status = request.form.get("status")
+    if update_application_status(app_id, new_status):
+        flash("Cập nhật trạng thái thành công.", "success")
+    else:
+        flash("Lỗi khi cập nhật trạng thái.", "danger")
+    return redirect(request.referrer)
+
+@main_bp.route("/manage-candidates/view-cv/<int:application_id>")
+def view_candidate_cv(application_id):
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
+        return redirect(url_for("main.login"))
+
+    application = Application.query.get_or_404(application_id)
+
+    # Kiểm tra quyền sở hữu bài đăng
+    if application.post.recruiter_id != user.id:
+        flash("Bạn không có quyền xem hồ sơ này.", "danger")
+        return redirect(url_for("main.index"))
+
+    return render_template("public/view_cv.html", application=application)
+
+@main_bp.route("/posts/<int:post_id>/report", methods=["POST"])
+def report_post(post_id):
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+
+    reason = request.form.get("reason")
+    description = request.form.get("description", "").strip()
+
+    if not reason:
+        flash("Vui lòng chọn lý do báo cáo.", "danger")
+        return redirect(url_for("main.index"))
+
+    success, message = submit_post_report(user, post_id, reason, description)
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("main.index"))
