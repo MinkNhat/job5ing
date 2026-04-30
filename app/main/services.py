@@ -12,8 +12,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 import cloudinary.uploader
+import google.generativeai as genai
+import fitz
+from docx import Document
 
 from app import db
+from app.models import User, CV
 from app.models import User, CV, Post, PostReport
 
 def submit_post_report(user, post_id, reason, description):
@@ -34,10 +38,10 @@ def submit_post_report(user, post_id, reason, description):
             description=description
         )
         db.session.add(new_report)
-        
+
         # Đánh dấu tin bị báo cáo để Admin dễ thấy
         post.is_reported = True
-        
+
         db.session.commit()
         return True, "Cảm ơn bạn! Báo cáo của bạn đã được gửi tới Ban quản trị."
     except Exception as e:
@@ -178,19 +182,6 @@ def update_account_profile(user, form_data, files=None):
     user.sex = (form_data.get("sex") or "").strip() or None
     user.avatar_url = avatar_url or None
     user.date_of_birth = date_of_birth
-
-    # --- Xử lý CV ---
-    # Lấy hoặc tạo CV cho user (giả sử mỗi user có 1 CV chính hiển thị trong profile)
-    cv = CV.query.filter_by(user_id=user.id).first()
-    if not cv:
-        cv = CV(user_id=user.id)
-        db.session.add(cv)
-    
-    cv.title = (form_data.get("cv_title") or "").strip() or None
-    cv.summary = (form_data.get("cv_summary") or "").strip() or None
-    cv.education = (form_data.get("cv_education") or "").strip() or None
-    cv.skills = (form_data.get("cv_skills") or "").strip() or None
-    cv.experience = (form_data.get("cv_experience") or "").strip() or None
 
     try:
         db.session.commit()
@@ -371,3 +362,144 @@ def login_with_google_profile(profile):
 
     finalize_login(user)
     return True, "Đăng nhập Google thành công."
+
+
+def extract_text_from_file(file_obj, file_ext):
+    try:
+        file_obj.seek(0)
+        if file_ext == ".pdf":
+            doc = fitz.open(stream=file_obj.read(), filetype="pdf")
+            text = "\n".join(page.get_text() for page in doc)
+            doc.close()
+        elif file_ext == ".docx":
+            doc = Document(file_obj)
+            text = "\n".join(para.text for para in doc.paragraphs)
+        else:
+            return None
+        return text.strip() or None
+    except:
+        return None
+
+
+def parse_resume_gemini(text, file_obj=None):
+    try:
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        prompt = """Extract resume data and return ONLY valid JSON:
+            {
+                "title": "job title or null",
+                "summary": "professional summary or null",
+                "skills": "comma-separated skills or null",
+                "experience": "work experience or null",
+                "education": "education or null"
+            }
+
+            Resume:
+            """ + (text or "")
+
+        if text:
+            response = model.generate_content(prompt)
+        else:
+            file_obj.seek(0)
+            file_data = file_obj.read()
+            response = model.generate_content([
+                {"mime_type": "application/pdf", "data": file_data},
+                prompt
+            ])
+
+        # parse json
+        response_text = response.text.strip()
+        try:
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                cv_data = json.loads(json_str)
+            else:
+                cv_data = json.loads(response_text)
+        except json.JSONDecodeError:
+            cv_data = {
+                "title": None,
+                "summary": None,
+                "skills": None,
+                "experience": None,
+                "education": None
+            }
+        return True, cv_data, None
+    except Exception as e:
+        return False, None, str(e)
+
+
+def get_user_cv(user):
+    cv = CV.query.filter_by(user_id=user.id).first()
+    if not cv:
+        cv = CV(user_id=user.id)
+        db.session.add(cv)
+        db.session.commit()
+    return cv
+
+
+def preview_resume(files=None):
+    if not files or "resume_file" not in files:
+        return False, None, None, "Vui lòng chọn file"
+
+    file = files["resume_file"]
+    if not file or not file.filename:
+        return False, None, None, "File không hợp lệ"
+
+    ext = ("." + file.filename.rsplit(".", 1)[1].lower()) if "." in file.filename else ""
+    if ext not in [".pdf", ".docx"]:
+        return False, None, None, "Chỉ hỗ trợ PDF hoặc DOCX"
+
+    try:
+        text = extract_text_from_file(file, ext)
+        file.seek(0)
+
+        is_valid, cv_data, error = parse_resume_gemini(text, file if not text else None)
+        if not is_valid:
+            return False, None, None, error
+
+        # Upload to Cloudinary
+        file.seek(0)
+        result = cloudinary.uploader.upload(
+            file,
+            folder="job5ing/resumes",
+            resource_type="auto",
+            overwrite=True,
+            unique_filename=False
+        )
+        cv_url = result.get("secure_url")
+
+        return True, cv_url, cv_data, None
+    except Exception as e:
+        return False, None, None, str(e)
+
+
+def save_resume(user, form_data):
+    try:
+        cv = CV.query.filter_by(user_id=user.id).first()
+        if not cv:
+            cv = CV(user_id=user.id)
+
+        cv.title = (form_data.get("title") or "").strip() or None
+        cv.summary = (form_data.get("summary") or "").strip() or None
+        cv.skills = (form_data.get("skills") or "").strip() or None
+        cv.education = (form_data.get("education") or "").strip() or None
+        cv.experience = (form_data.get("experience") or "").strip() or None
+        if form_data.get("cv_url"):
+            cv.cv_url = form_data.get("cv_url")
+
+        cv_content = {
+            "title": cv.title,
+            "summary": cv.summary,
+            "skills": cv.skills,
+            "experience": cv.experience,
+            "education": cv.education
+        }
+        cv.cv_content = json.dumps(cv_content, ensure_ascii=False)
+
+        db.session.add(cv)
+        db.session.commit()
+        return True, "Lưu CV thành công"
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Lỗi: {str(e)}"

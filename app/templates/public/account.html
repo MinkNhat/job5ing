@@ -1,7 +1,5 @@
 {% extends 'base.html' %}
 
-{% block title %}Job5ing | Tài khoản{% endblock %}
-
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/public/account.css') }}">
 {% endblock %}
@@ -29,7 +27,7 @@
                             {{ ((user.first_name or user.email or 'J')[:1]).upper() }}
                         {% endif %}
                     </div>
-                    <h6 class="fw-bold mb-1">{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or 'Ứng viên' }}</h6>
+                    <h6 class="fw-bold mb-1">{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or 'Nhà tuyển dụng' if user.is_employer else 'Ứng viên' }}</h6>
                     <p class="text-muted small mb-3">{{ user.email }}</p>
                     <div class="d-flex gap-2 justify-content-center">
                         <span class="badge-role-blue">{{ 'Nhà tuyển dụng' if user.is_employer else 'Ứng viên' }}</span>
@@ -89,7 +87,7 @@
                             value="{{ request.form.get('phone', user.phone or '') }}"
                         >
                     </div>
-                    <divc class="col-md-6"></divc>
+                    <div class="col-md-6"></div>
 
                     <div class="col-md-6">
                         <label for="sex" class="form-label">Giới tính</label>

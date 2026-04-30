@@ -106,6 +106,7 @@ class CV(db.Model):
     skills = db.Column(db.Text)
     experience = db.Column(db.Text)
     cv_url = db.Column(db.String(255))
+    cv_content = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, default=db.func.now())
     last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
@@ -202,6 +203,8 @@ class Application(db.Model):
         db.Enum('RECEIVED', 'INTERVIEW', 'APPROVED', 'REJECT'),
         default='RECEIVED'
     )
+
+    cover_letter = db.Column(db.Text)
 
     __table_args__ = (
         db.UniqueConstraint('cv_id', 'post_id', name='uq_app_cv_post'),

@@ -1,0 +1,17 @@
+Mỗi lần chỉnh sửa db, cần tạo migrate
+
+
+```bash
+flask db migrate -m "message"
+```
+
+```bash
+flask db upgrade
+```
+
+Khi pull về, nếu có migration cần update db
+
+```bash
+flask db upgrade
+```
+
