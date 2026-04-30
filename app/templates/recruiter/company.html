@@ -1,0 +1,99 @@
+{% extends "base_recruiter.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/recruiter/company.css') }}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/recruiter/company.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="content-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="fw-bold m-0">Thông tin công ty</h5>
+            </div>
+        </div>
+
+        <form method="post" action="" enctype="multipart/form-data">
+            <div class="row g-5 mb-3">
+                <div class="col-md-4 d-flex flex-column">
+                    <div id="logo-preview" class="text-center mb-3" style="height: 150px; display: flex; align-items: center; justify-content: center;">
+                        {% if company.avatar_url %}
+                            <img src="{{ company.avatar_url }}" alt="{{ company.name }}" class="img-fluid rounded" style="max-height: 100%; max-width: 100%; object-fit: contain; border: 1px solid #dee2e6; border-radius: 8px;">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/company.jpg') }}" alt="Company Default" class="img-fluid rounded" style="max-height: 100%; max-width: 100%; object-fit: cover; border: 1px solid #dee2e6; border-radius: 8px;">
+                        {% endif %}
+                    </div>
+                    {% if recruiter.is_company_admin %}
+                        <input type="file" id="logo" name="logo" class="form-control" accept="image/*">
+                    {% endif %}
+                </div>
+
+                <div class="col-md-8 d-flex flex-column justify-content-center">
+                    <label class="form-label">Tên công ty</label>
+                    <input type="text" name="name" class="form-control mb-3" value="{{ company.name }}" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+
+                    <label class="form-label">Mô tả công ty</label>
+                    <textarea name="description" class="form-control" rows="4" placeholder="Nhập mô tả về công ty..." 
+                                {% if not recruiter.is_company_admin %}disabled{% endif %}>{{ company.description or '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Địa chỉ</label>
+                <input type="text" name="location" class="form-control" value="{{ company.location or '' }}" placeholder="Nhập địa chỉ công ty" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Website</label>
+                    <input type="url" name="website" class="form-control" value="{{ company.website or '' }}" placeholder="https://..." {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Quy mô công ty</label>
+                    <select name="scale" class="form-select" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                        <option value="">Chọn quy mô</option>
+                        <option value="1-10" {% if company.scale == '1-10' %}selected{% endif %}>1-10 nhân viên</option>
+                        <option value="11-50" {% if company.scale == '11-50' %}selected{% endif %}>11-50 nhân viên</option>
+                        <option value="51-200" {% if company.scale == '51-200' %}selected{% endif %}>51-200 nhân viên</option>
+                        <option value="201-500" {% if company.scale == '201-500' %}selected{% endif %}>201-500 nhân viên</option>
+                        <option value="500+" {% if company.scale == '500+' %}selected{% endif %}>500+ nhân viên</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Mã số thuế</label>
+                    <input type="text" class="form-control" value="{{ company.tax_code or '' }}" 
+                            placeholder="Nhập mã số thuế" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Ngày thành lập</label>
+                    <input type="date" class="form-control" 
+                            value="{% if company.establish_date %}{{ company.establish_date.strftime('%Y-%m-%d') }}{% endif %}" 
+                            {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Giấy phép kinh doanh</label>
+                    <input type="text" class="form-control" value="{{ company.business_license or '' }}" 
+                            placeholder="Nhập số giấy phép kinh doanh" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                </div>
+            </div>
+
+            {% if recruiter.is_company_admin %}
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">
+                        Lưu thay đổi
+                    </button>
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}

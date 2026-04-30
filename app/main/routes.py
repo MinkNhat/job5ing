@@ -2,7 +2,7 @@ import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for, jsonify
 from itsdangerous import BadSignature, BadTimeSignature
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -20,19 +20,20 @@ from .services import (
     require_logged_in_user,
     update_account_profile,
     validate_google_state_token,
+    get_user_cv,
+    preview_resume,
+    save_resume,
     validate_tax_code,
     submit_post_report,
 )
-from app.models import Application, Company, Post, Recruiter, User
+from app.models import Company, Post, Recruiter, User, Application, Notification, CV, ApplicationStatusHistory
 from app import db
 
 main_bp = Blueprint("main", __name__)
 
-
 @main_bp.app_context_processor
 def provide_public_context():
     return inject_public_auth_context()
-
 
 @main_bp.route("/")
 def index():
@@ -95,7 +96,6 @@ def index():
         experience_options=EXPERIENCE_OPTIONS,
         salary_options=SALARY_OPTIONS,
     )
-
 
 @main_bp.route("/register", methods=["GET", "POST"])
 def register():
@@ -350,10 +350,11 @@ def google_callback():
             if target_is_employer and user:
                 user.is_employer = True
                 db.session.commit()
+                # Cập nhật lại session role
                 session["user_role"] = "employer"
                 flash("Đăng ký tài khoản nhà tuyển dụng qua Google thành công.", "success")
                 return redirect(url_for("main.recruiter_request"))
-            
+
             flash(message, "success")
             if user and user.is_admin:
                 return redirect(url_for("admin_panel.index"))
@@ -392,7 +393,7 @@ def recruiter_posts():
 
     # Lấy tất cả bài đăng của công ty đó
     posts = Post.query.filter(Post.recruiter.has(company_id=recruiter.company_id)).order_by(Post.created_at.desc()).all()
-    
+
     return render_template("public/company_posts.html", posts=posts, company=recruiter.company)
 
 @main_bp.route("/manage-candidates/<int:post_id>")
@@ -403,7 +404,7 @@ def manage_candidates(post_id):
         return redirect(url_for("main.login"))
 
     post = Post.query.get_or_404(post_id)
-    
+
     # Lấy thông tin recruiter của user hiện tại và recruiter tạo tin
     current_recruiter = Recruiter.query.filter_by(user_id=user.id).first()
     post_recruiter = Recruiter.query.filter_by(user_id=post.recruiter_id).first()
@@ -419,7 +420,7 @@ def manage_candidates(post_id):
 
     query = get_applications_for_post(post_id, status_filter, sort_by_ai)
     pagination = query.paginate(page=page, per_page=10, error_out=False)
-    
+
     # Tính toán thống kê chính xác cho từng trạng thái
     stats = {
         "all": Application.query.filter_by(post_id=post_id).count(),
@@ -447,7 +448,7 @@ def run_ai_screening(post_id):
     post = Post.query.get_or_404(post_id)
     for app in post.applications:
         app.ai_score = calculate_ai_score(app.cv_id, post_id)
-    
+
     db.session.commit()
     flash("Đã hoàn tất sàng lọc hồ sơ bằng AI.", "success")
     return redirect(url_for("main.manage_candidates", post_id=post_id, sort_by_ai=1))
@@ -470,7 +471,7 @@ def view_candidate_cv(application_id):
         return redirect(url_for("main.login"))
 
     application = Application.query.get_or_404(application_id)
-    
+
     # Kiểm tra quyền sở hữu bài đăng
     if application.post.recruiter_id != user.id:
         flash("Bạn không có quyền xem hồ sơ này.", "danger")
@@ -494,3 +495,164 @@ def report_post(post_id):
     success, message = submit_post_report(user, post_id, reason, description)
     flash(message, "success" if success else "danger")
     return redirect(url_for("main.index"))
+
+
+@main_bp.route("/preview-resume", methods=["POST"])
+def preview_resume_endpoint():
+    user = require_logged_in_user()
+
+    try:
+        is_valid, cv_url, cv_data, error_message = preview_resume(request.files)
+        if not is_valid:
+            return jsonify({"success": False, "message": error_message}), 400
+
+        return jsonify({
+            "success": True,
+            "message": "Preview CV thành công",
+            "cv_url": cv_url,
+            "cv_data": {
+                "title": cv_data.get("title") or "",
+                "summary": cv_data.get("summary") or "",
+                "skills": cv_data.get("skills") or "",
+                "experience": cv_data.get("experience") or "",
+                "education": cv_data.get("education") or ""
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"}), 500
+
+
+@main_bp.route("/resume", methods=["GET", "POST"])
+def resume():
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+
+    if user.is_employer:
+        flash("Chỉ ứng viên mới có thể quản lý CV.", "warning")
+        return redirect(url_for("main.index"))
+
+    if request.method == "POST":
+        success, message = save_resume(user, request.form)
+        flash(message, "success" if success else "danger")
+        return redirect(url_for("main.resume"))
+
+    cv = get_user_cv(user)
+    return render_template("candidate/resume.html", user=user, cv=cv)
+
+
+@main_bp.route("/post/<int:post_id>")
+def post_details(post_id):
+    post = Post.query.get_or_404(post_id)
+    # Fetch related jobs from the same company, excluding the current one
+    related_posts = Post.query.filter(
+        Post.status.in_(["ACTIVE", "PINNED"]),
+        Post.id != post_id
+    ).join(Recruiter).filter(
+        Recruiter.company_id == post.recruiter.company_id
+    ).limit(3).all()
+
+    has_applied = False
+    cv = None
+    if 'user_id' in session:
+        user = db.session.get(User, session['user_id'])
+        if user and not user.is_employer:
+            cv = CV.query.filter_by(user_id=user.id).first()
+            if cv:
+                has_applied = Application.query.filter_by(cv_id=cv.id, post_id=post.id).first() is not None
+
+    return render_template("public/post_details.html", post=post, related_posts=related_posts, has_applied=has_applied, cv=cv)
+
+@main_bp.route("/post/<int:post_id>/apply", methods=["POST"])
+def apply_job(post_id):
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+
+    if user.is_employer:
+        flash("Nhà tuyển dụng không thể ứng tuyển.", "warning")
+        return redirect(url_for("main.post_details", post_id=post_id))
+
+    post = Post.query.get_or_404(post_id)
+
+    # Update phone if provided
+    new_phone = request.form.get("phone")
+    if new_phone and new_phone != user.phone:
+        user.phone = new_phone
+
+    cv = get_user_cv(user)
+
+    # Handle New CV Upload
+    if 'new_cv' in request.files and request.files['new_cv'].filename != '':
+        new_cv_file = request.files['new_cv']
+        ext = ("." + new_cv_file.filename.rsplit(".", 1)[1].lower()) if "." in new_cv_file.filename else ""
+        if ext in [".pdf", ".doc", ".docx"]:
+            try:
+                import cloudinary.uploader
+                upload_result = cloudinary.uploader.upload(
+                    new_cv_file,
+                    folder="job5ing/resumes",
+                    resource_type="auto"
+                )
+                cv.cv_url = upload_result.get("secure_url")
+                cv.title = new_cv_file.filename
+            except Exception as e:
+                flash(f"Lỗi khi tải CV lên: {str(e)}", "danger")
+                return redirect(url_for("main.post_details", post_id=post_id))
+
+    if not cv or (not cv.cv_url and not cv.cv_content):
+        flash("Vui lòng cập nhật hồ sơ CV (tải lên file hoặc điền thông tin) trước khi ứng tuyển.", "warning")
+        return redirect(url_for("main.resume"))
+
+    # Check if already applied
+    existing_app = Application.query.filter_by(cv_id=cv.id, post_id=post.id).first()
+    if existing_app:
+        flash("Bạn đã ứng tuyển vào vị trí này rồi.", "info")
+        return redirect(url_for("main.post_details", post_id=post_id))
+
+    cover_letter = request.form.get("cover_letter")
+    application = Application(cv_id=cv.id, post_id=post.id, cover_letter=cover_letter)
+    db.session.add(application)
+    db.session.flush() # Lấy ID của application
+
+    # Ghi lại lịch sử ban đầu
+    history = ApplicationStatusHistory(
+        application_id=application.id,
+        new_status='RECEIVED',
+        notes="Ứng viên nộp hồ sơ trực tuyến."
+    )
+    db.session.add(history)
+
+    # Notify recruiter
+    notification = Notification(
+        user_id=post.recruiter_id,
+        content=f"Có ứng viên mới ứng tuyển vào vị trí {post.title}.",
+        type='NEW_APPLICATION'
+    )
+    db.session.add(notification)
+
+    try:
+        db.session.commit()
+        flash("Ứng tuyển thành công!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Có lỗi xảy ra, vui lòng thử lại.", "danger")
+
+    return redirect(url_for("main.post_details", post_id=post_id))
+
+@main_bp.route("/applied-jobs")
+def applied_jobs():
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login"))
+
+    if user.is_employer:
+        flash("Chỉ ứng viên mới có thể xem danh sách việc làm đã ứng tuyển.", "warning")
+        return redirect(url_for("main.index"))
+
+    cv = CV.query.filter_by(user_id=user.id).first()
+    applications = []
+    if cv:
+        applications = Application.query.filter_by(cv_id=cv.id).order_by(Application.applied_at.desc()).all()
+
+    return render_template("candidate/applied_jobs.html", applications=applications)

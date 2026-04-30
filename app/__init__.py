@@ -1,8 +1,10 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
+from flask_migrate import Migrate
 
 db = SQLAlchemy()
+migrate = Migrate()
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -11,6 +13,7 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     db.init_app(app)
+    migrate.init_app(app, db)
 
     from flask import session
     from app.models import User
@@ -23,6 +26,8 @@ def create_app(test_config=None):
 
     from app.admin.routes import admin_bp
     app.register_blueprint(admin_bp)
+    from app.recruiter import recruiter_bp
+    app.register_blueprint(recruiter_bp)
     from app.main.routes import main_bp
     app.register_blueprint(main_bp)
     return app

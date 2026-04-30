@@ -106,6 +106,7 @@ class CV(db.Model):
     skills = db.Column(db.Text)
     experience = db.Column(db.Text)
     cv_url = db.Column(db.String(255))
+    cv_content = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, default=db.func.now())
     last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
@@ -203,9 +204,37 @@ class Application(db.Model):
         default='RECEIVED'
     )
 
+    cover_letter = db.Column(db.Text)
+
     __table_args__ = (
         db.UniqueConstraint('cv_id', 'post_id', name='uq_app_cv_post'),
     )
+
+    # Relationships
+    history = db.relationship('ApplicationStatusHistory', backref='application', lazy=True, cascade="all, delete-orphan")
+
+
+# =========================
+# APPLICATION STATUS HISTORY
+# =========================
+class ApplicationStatusHistory(db.Model):
+    __tablename__ = 'application_status_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    application_id = db.Column(
+        db.Integer,
+        db.ForeignKey('application.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    old_status = db.Column(db.String(50))
+    new_status = db.Column(db.String(50), nullable=False)
+    changed_at = db.Column(db.DateTime, default=db.func.now())
+    changed_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True
+    )
+    notes = db.Column(db.Text)
 
 
 # =========================

@@ -1,6 +1,6 @@
 import re
 from app import db
-from app.models import Application, Post, CV
+from app.models import Application, Post, CV, ApplicationStatusHistory
 
 from services.smtp_service import send_application_status_email
 
@@ -53,29 +53,41 @@ def get_applications_for_post(post_id, status_filter=None, sort_by_ai=False):
         
     return query
 
-def update_application_status(application_id, new_status):
+def update_application_status(application_id, new_status, changed_by_id=None):
     app = db.session.get(Application, application_id)
     if app:
         old_status = app.status
+        if old_status == new_status:
+            return True
+            
         app.status = new_status
+        
+        # Ghi lại lịch sử thay đổi trạng thái
+        history = ApplicationStatusHistory(
+            application_id=app.id,
+            old_status=old_status,
+            new_status=new_status,
+            changed_by_id=changed_by_id
+        )
+        db.session.add(history)
+        
         db.session.commit()
         
         # Gửi email thông báo nếu trạng thái thay đổi
-        if old_status != new_status:
-            try:
-                candidate = app.cv.user
-                job_title = app.post.title
-                company_name = app.post.recruiter.company.name
-                
-                send_application_status_email(
-                    user_email=candidate.email,
-                    user_name=f"{candidate.last_name or ''} {candidate.first_name or ''}".strip(),
-                    job_title=job_title,
-                    company_name=company_name,
-                    new_status=new_status
-                )
-            except Exception as e:
-                print(f"Lỗi khi gửi mail thông báo trạng thái: {e}")
+        try:
+            candidate = app.cv.user
+            job_title = app.post.title
+            company_name = app.post.recruiter.company.name
+            
+            send_application_status_email(
+                user_email=candidate.email,
+                user_name=f"{candidate.last_name or ''} {candidate.first_name or ''}".strip(),
+                job_title=job_title,
+                company_name=company_name,
+                new_status=new_status
+            )
+        except Exception as e:
+            print(f"Lỗi khi gửi mail thông báo trạng thái: {e}")
                 
         return True
     return False
