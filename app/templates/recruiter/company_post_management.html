@@ -42,15 +42,13 @@
 
         <!-- FILTER & LIST -->
         <div class="content-card mt-0">
-            <!-- Toolbar Tìm kiếm & Lọc (Standardized 4 columns) -->
-            <form class="filter-row-4" method="GET">
-                <div class="form-group">
-                    <label class="form-label">Tiêu đề tin</label>
-                    <input type="text" name="q" placeholder="Tìm theo tiêu đề..." class="form-control" value="{{ request.args.get('q', '') }}">
+            <!-- Toolbar Tìm kiếm & Lọc (Standardized 3 columns) -->
+            <form class="filter-row-3" method="GET" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; align-items: center;">
+                <div class="form-group mb-0">
+                    <input type="text" name="q" placeholder="Tìm theo tiêu đề..." class="form-control" value="{{ request.args.get('q', '') }}" style="height: 45px;">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Trạng thái</label>
-                    <select name="status" class="form-select">
+                <div class="form-group mb-0">
+                    <select name="status" class="form-select" style="height: 45px;">
                         <option value="">Tất cả trạng thái</option>
                         <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Đang hiển thị</option>
                         <option value="closed" {% if request.args.get('status') == 'closed' %}selected{% endif %}>Đã đóng</option>
@@ -58,18 +56,9 @@
                         <option value="pinned" {% if request.args.get('status') == 'pinned' %}selected{% endif %}>Đang ghim</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Kinh nghiệm</label>
-                    <select name="experience" class="form-select">
-                        <option value="">Tất cả kinh nghiệm</option>
-                        {% for opt in experience_options %}
-                        <option value="{{ opt }}" {% if request.args.get('experience') == opt %}selected{% endif %}>{{ opt }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="btn-group-filter">
-                    <button type="submit" class="btn-orange flex-grow-1">Lọc</button>
-                    <a href="{{ url_for('recruiter.dashboard') }}" class="btn-outline-orange">Xóa lọc</a>
+                <div class="btn-group-filter d-flex gap-2">
+                    <button type="submit" class="btn-orange flex-grow-1" style="height: 45px;">Tìm kiếm</button>
+                    <a href="{{ url_for('recruiter.dashboard') }}" class="btn-outline-orange d-flex align-items-center justify-content-center" style="height: 45px; white-space: nowrap;">Xóa tìm kiếm</a>
                 </div>
             </form>
 
@@ -91,7 +80,7 @@
                             <tr>
                                 <td>
                                     <div class="font-weight-bold text-dark">{{ job.title }}</div>
-                                    <small class="text-muted">{{ job.experience }} | {{ job.salary_range }}</small>
+                                    <small class="text-muted">{{ job.experience_ref.name if job.experience_ref else 'Không yêu cầu' }} | {{ job.salary_ref.name if job.salary_ref else 'Thỏa thuận' }}</small>
                                 </td>
                                 <td>{{ job.last_modified.strftime('%d/%m/%Y') }}</td>
                                 <td>
@@ -160,7 +149,7 @@
     </div>
 </div>
 
-<!-- JOB MODAL (Giữ nguyên logic JS) -->
+<!-- JOB MODAL -->
 <div id="jobModal" class="custom-modal-overlay hidden">
     <div class="custom-modal-content">
         <div class="modal-header">
@@ -185,22 +174,25 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6 form-group">
-                        <label>Mức lương</label>
-                        <select name="salary_range" id="m_salary" class="form-control">
-                            {% for opt in salary_options %}
-                            <option value="{{ opt }}">{{ opt }}</option>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Mức lương</label>
+                        <select name="salary" id="jobSalary" class="form-select">
+                            <option value="">Thỏa thuận</option>
+                            {% for opt in all_salaries %}
+                            <option value="{{ opt.id }}">{{ opt.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-6 form-group">
-                        <label>Kinh nghiệm</label>
-                        <select name="experience" id="m_exp" class="form-control">
-                            {% for opt in experience_options %}
-                            <option value="{{ opt }}">{{ opt }}</option>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Kinh nghiệm</label>
+                        <select name="experience" id="jobExperience" class="form-select">
+                            <option value="">Không yêu cầu</option>
+                            {% for opt in all_experiences %}
+                            <option value="{{ opt.id }}">{{ opt.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
+
                 </div>
 
                 <div class="row">
@@ -243,8 +235,8 @@ function openJobModal(jobId = null) {
                 if(data.success) {
                     const j = data.job;
                     document.getElementById('m_title').value = j.title;
-                    document.getElementById('m_salary').value = j.salary_range;
-                    document.getElementById('m_exp').value = j.experience;
+                    document.getElementById('m_salary').value = j.salary_id || '';
+                    document.getElementById('m_exp').value = j.experience_id || '';
                     document.getElementById('m_deadline').value = j.deadline;
                     document.getElementById('m_skills').value = j.skills || '';
                     document.getElementById('m_desc').value = j.description;

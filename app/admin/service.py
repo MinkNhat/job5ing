@@ -1,23 +1,17 @@
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
-
 from app import db
 from app.models import User, Company, Post, Application, Notification, PostReport
 from services.smtp_service import send_approval_email
-
 def get_dashboard_stats(admin_id):
     total_users = User.query.count()
     total_companies = Company.query.count()
     total_posts = Post.query.count()
     total_applications = Application.query.count()
-
     active_posts = Post.query.filter_by(status='ACTIVE').count()
     pending_companies = Company.query.filter_by(is_approved=False).count()
-    
-    # Lấy danh sách thông báo thực tế từ DB
     notifications = Notification.query.filter_by(user_id=admin_id)\
         .order_by(Notification.created_at.desc()).all()
-
     return {
         "total_users": total_users,
         "total_companies": total_companies,
@@ -27,11 +21,9 @@ def get_dashboard_stats(admin_id):
         "pending_companies": pending_companies,
         "notifications": notifications
     }
-
 def delete_admin_notifications(admin_id, notification_ids):
     if not notification_ids:
         return False, "Chưa chọn thông báo nào."
-    
     try:
         Notification.query.filter(
             Notification.id.in_(notification_ids),
@@ -42,10 +34,8 @@ def delete_admin_notifications(admin_id, notification_ids):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Lỗi khi xóa thông báo."
-
 def get_users(page=1, keyword=None, role=None, status=None):
     query = User.query
-
     if keyword:
         keyword_filter = f"%{keyword}%"
         query = query.filter(
@@ -56,7 +46,6 @@ def get_users(page=1, keyword=None, role=None, status=None):
                 User.phone.ilike(keyword_filter)
             )
         )
-
     if role and role != "all":
         role = role.strip().lower()
         if role == "admin":
@@ -68,23 +57,16 @@ def get_users(page=1, keyword=None, role=None, status=None):
                 User.is_admin.is_(False),
                 User.is_employer.is_(False)
             )
-
     if status and status != "all":
         status = status.strip().lower()
         if status in ("active", "1"):
             query = query.filter(User.is_active.is_(True))
         elif status in ("inactive", "0"):
             query = query.filter(User.is_active.is_(False))
-
     return query.order_by(User.created_at.desc()).paginate(page=page, per_page=10)
-
-
 def get_user_by_id(user_id):
     return db.session.get(User, user_id)
-
-
 from flask import session
-
 def get_current_admin():
     user_id = session.get("user_id")
     if not user_id:
@@ -93,8 +75,6 @@ def get_current_admin():
     if user and user.is_admin:
         return user
     return None
-
-
 def update_user(user, form_data):
     email = (form_data.get("email") or "").strip()
     password = form_data.get("password")
@@ -105,38 +85,29 @@ def update_user(user, form_data):
     sex = (form_data.get("sex") or "").strip() or None
     role = (form_data.get("role") or "user").strip().lower()
     is_active = form_data.get("is_active") == "1"
-
     if not email:
         return False, "Email không được để trống."
-
     existing_user = User.query.filter(User.email == email, User.id != user.id).first()
     if existing_user:
         return False, "Email này đã tồn tại."
-
     user.email = email
-    if password:  # Nếu có nhập mật khẩu mới thì mới băm và cập nhật
+    if password:  
         user.set_password(password)
-        
     user.first_name = first_name
     user.last_name = last_name
     user.phone = phone
     user.address = address
     user.sex = sex
     user.is_active = is_active
-
     user.is_admin = role == "admin"
     user.is_employer = role == "employer"
-
     try:
         db.session.commit()
         return True, "Cập nhật tài khoản thành công."
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể cập nhật tài khoản. Vui lòng thử lại."
-
-
 import cloudinary.uploader
-
 def update_admin_profile(user, form_data, files=None):
     email = (form_data.get("email") or "").strip()
     first_name = (form_data.get("first_name") or "").strip() or None
@@ -145,15 +116,11 @@ def update_admin_profile(user, form_data, files=None):
     address = (form_data.get("address") or "").strip() or None
     sex = (form_data.get("sex") or "").strip() or None
     avatar_url = (form_data.get("avatar_url") or "").strip() or user.avatar_url
-
     if not email:
         return False, "Email không được để trống."
-
     existing_user = User.query.filter(User.email == email, User.id != user.id).first()
     if existing_user:
         return False, "Email này đã tồn tại."
-
-    # Handle avatar upload via Cloudinary
     if files and "avatar" in files:
         avatar_file = files["avatar"]
         if avatar_file and avatar_file.filename:
@@ -168,7 +135,6 @@ def update_admin_profile(user, form_data, files=None):
                 avatar_url = result.get("secure_url")
             except Exception as e:
                 return False, f"Không thể upload ảnh lên. Vui lòng thử lại. ({str(e)})"
-
     user.email = email
     user.first_name = first_name
     user.last_name = last_name
@@ -176,18 +142,14 @@ def update_admin_profile(user, form_data, files=None):
     user.address = address
     user.sex = sex
     user.avatar_url = avatar_url
-
     try:
         db.session.commit()
         return True, "Đã cập nhật hồ sơ quản trị viên."
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể cập nhật hồ sơ. Vui lòng thử lại."
-
-
 def toggle_user_status(user):
     user.is_active = not user.is_active
-
     try:
         db.session.commit()
         if user.is_active:
@@ -196,8 +158,6 @@ def toggle_user_status(user):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể thay đổi trạng thái tài khoản."
-
-
 def delete_user(user):
     try:
         db.session.delete(user)
@@ -206,11 +166,8 @@ def delete_user(user):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể xóa tài khoản. Tài khoản có thể đang liên kết với dữ liệu khác."
-
-
 def get_posts(page=1, keyword=None, status=None, is_reported=None):
     query = Post.query
-
     if keyword:
         keyword_filter = f"%{keyword}%"
         query = query.filter(
@@ -220,24 +177,16 @@ def get_posts(page=1, keyword=None, status=None, is_reported=None):
                 Post.skills.ilike(keyword_filter)
             )
         )
-
     if status and status != "all":
         query = query.filter(Post.status == status)
-
     if is_reported is not None:
         query = query.filter(Post.is_reported == is_reported)
-
     return query.order_by(Post.created_at.desc()).paginate(page=page, per_page=10)
-
-
 def get_post_by_id(post_id):
     return db.session.get(Post, post_id)
-
-
 def update_post_status(post, new_status):
     if new_status not in ['ACTIVE', 'OVERDUE', 'CLOSED', 'PINNED', 'BLOCKED']:
         return False, "Trạng thái không hợp lệ."
-
     post.status = new_status
     try:
         db.session.commit()
@@ -245,8 +194,6 @@ def update_post_status(post, new_status):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể cập nhật trạng thái tin tuyển dụng."
-
-
 def delete_post(post):
     try:
         db.session.delete(post)
@@ -255,11 +202,8 @@ def delete_post(post):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể xóa tin tuyển dụng."
-
-
 def get_companies(page=1, keyword=None, status=None):
     query = Company.query
-
     if keyword:
         keyword_filter = f"%{keyword}%"
         query = query.filter(
@@ -269,26 +213,17 @@ def get_companies(page=1, keyword=None, status=None):
                 Company.location.ilike(keyword_filter)
             )
         )
-
     if status == "approved":
         query = query.filter(Company.is_approved.is_(True))
     elif status == "pending":
         query = query.filter(Company.is_approved.is_(False))
-
     return query.order_by(Company.id.desc()).paginate(page=page, per_page=10)
-
-
 def get_company_by_id(company_id):
     return db.session.get(Company, company_id)
-
-
 def approve_company(company):
     if company.is_approved:
         return False, "Công ty này đã được duyệt trước đó."
-
     company.is_approved = True
-    
-    # Tạo thông báo cho các recruiter của công ty
     for recruiter in company.recruiters:
         notification = Notification(
             user_id=recruiter.user_id,
@@ -296,19 +231,14 @@ def approve_company(company):
             type='ACCOUNT_APPROVED'
         )
         db.session.add(notification)
-        
-        # Gửi email thông báo
         if recruiter.user and recruiter.user.email:
             send_approval_email(recruiter.user.email, company.name)
-
     try:
         db.session.commit()
         return True, f"Đã phê duyệt công ty {company.name} và gửi thông báo."
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể phê duyệt công ty. Vui lòng thử lại."
-
-
 def delete_company(company):
     try:
         db.session.delete(company)
@@ -317,17 +247,12 @@ def delete_company(company):
     except SQLAlchemyError:
         db.session.rollback()
         return False, "Không thể xóa công ty do có dữ liệu liên quan."
-
-
 def get_post_reports(post_id):
     return PostReport.query.filter_by(post_id=post_id, is_resolved=False).all()
-
-
 def dismiss_post_reports(post_id):
     post = db.session.get(Post, post_id)
     if not post:
         return False, "Không tìm thấy tin tuyển dụng."
-    
     try:
         PostReport.query.filter_by(post_id=post_id).update({"is_resolved": True})
         post.is_reported = False

@@ -11,8 +11,8 @@
             <h4 class="footer-heading">Khám phá</h4>
             <ul class="footer-links">
                 <li><a href="{{ url_for('main.index') }}#jobs">Việc làm mới</a></li>
-                <li><a href="{{ url_for('main.index') }}#cv">Tạo CV online</a></li>
-                <li><a href="{{ url_for('main.register') }}">Đăng ký ứng viên</a></li>
+                <li><a href="{{ url_for('main.resume_management') if current_user else url_for('main.login', next=url_for('main.resume', action='create')) }}">Tạo CV online</a></li>
+                <li><a href="{{ url_for('main.recruiter_request') }}">Trở thành nhà tuyển dụng</a></li>
             </ul>
         </div>
 

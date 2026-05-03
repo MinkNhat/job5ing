@@ -9,8 +9,8 @@
         </div>
 
         <!-- FILTER -->
-        <form class="row g-3 mb-4" method="get" action="{{ url_for('admin_panel.companies') }}">
-            <div class="col-md-6">
+        <form class="filter-row-3 mb-4" method="get" action="{{ url_for('admin_panel.companies') }}">
+            <div class="form-group">
                 <input
                     type="text"
                     class="form-control"
@@ -20,7 +20,7 @@
                 >
             </div>
 
-            <div class="col-md-4">
+            <div class="form-group">
                 <select class="form-select" name="status">
                     <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
                     <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Đang chờ duyệt</option>
@@ -28,7 +28,7 @@
                 </select>
             </div>
 
-            <div class="col-md-2">
+            <div class="btn-group-filter">
                 <button type="submit" class="btn btn-filter w-100">Lọc</button>
             </div>
         </form>

@@ -48,9 +48,20 @@
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">Địa chỉ</label>
-                <input type="text" name="location" class="form-control" value="{{ company.location or '' }}" placeholder="Nhập địa chỉ công ty" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Tỉnh/Thành phố</label>
+                    <select name="city_id" class="form-select" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                        <option value="">Chọn tỉnh/thành phố</option>
+                        {% for loc in all_locations %}
+                        <option value="{{ loc.id }}" {% if company.city_id == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Địa chỉ chi tiết</label>
+                    <input type="text" name="address" class="form-control" value="{{ company.location.split(', ')[0] if company.location and ', ' in company.location else company.location if company.location else '' }}" placeholder="Số nhà, tên đường..." {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                </div>
             </div>
 
             <div class="row mb-3">
@@ -60,13 +71,11 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Quy mô công ty</label>
-                    <select name="scale" class="form-select" {% if not recruiter.is_company_admin %}disabled{% endif %}>
+                    <select name="scale_id" class="form-select" {% if not recruiter.is_company_admin %}disabled{% endif %}>
                         <option value="">Chọn quy mô</option>
-                        <option value="1-10" {% if company.scale == '1-10' %}selected{% endif %}>1-10 nhân viên</option>
-                        <option value="11-50" {% if company.scale == '11-50' %}selected{% endif %}>11-50 nhân viên</option>
-                        <option value="51-200" {% if company.scale == '51-200' %}selected{% endif %}>51-200 nhân viên</option>
-                        <option value="201-500" {% if company.scale == '201-500' %}selected{% endif %}>201-500 nhân viên</option>
-                        <option value="500+" {% if company.scale == '500+' %}selected{% endif %}>500+ nhân viên</option>
+                        {% for opt in all_scales %}
+                        <option value="{{ opt.id }}" {% if company.scale_id == opt.id %}selected{% endif %}>{{ opt.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>

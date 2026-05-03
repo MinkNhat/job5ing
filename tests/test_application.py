@@ -229,7 +229,7 @@ class ApplicationTestCase(unittest.TestCase):
         
         self.assertIn("Việc làm đã ứng tuyển", data)
         self.assertIn(post_title, data)
-        self.assertIn("Mời phỏng vấn", data)
+        self.assertIn("Phỏng vấn", data)
 
 if __name__ == "__main__":
     unittest.main()

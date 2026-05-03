@@ -45,24 +45,25 @@
 
             <select name="location">
                 <option value="">Tất cả địa điểm</option>
-                {% for loc in locations %}
-                <option value="{{ loc }}" {% if request.args.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
+                {% for loc in all_locations %}
+                <option value="{{ loc.id }}" {% if request.args.get('location') == loc.id|string %}selected{% endif %}>{{ loc.name }}</option>
                 {% endfor %}
             </select>
 
             <select name="experience">
                 <option value="">Kinh nghiệm</option>
-                {% for exp in experience_options %}
-                <option value="{{ exp }}" {% if request.args.get('experience') == exp %}selected{% endif %}>{{ exp }}</option>
+                {% for exp in all_experiences %}
+                <option value="{{ exp.id }}" {% if request.args.get('experience') == exp.id|string %}selected{% endif %}>{{ exp.name }}</option>
                 {% endfor %}
             </select>
 
             <select name="salary">
                 <option value="">Mức lương</option>
-                {% for sal in salary_options %}
-                <option value="{{ sal }}" {% if request.args.get('salary') == sal %}selected{% endif %}>{{ sal }}</option>
+                {% for sal in all_salaries %}
+                <option value="{{ sal.id }}" {% if request.args.get('salary') == sal.id|string %}selected{% endif %}>{{ sal.name }}</option>
                 {% endfor %}
             </select>
+
 
             <button type="submit">Tìm kiếm</button>
         </form>
@@ -91,39 +92,47 @@
     <div class="container">
         <div class="job-grid">
             {% for job in pagination.items %}
-            <a href="{{ url_for('main.post_details', post_id=job.id) }}" class="job-card-link">
-                <article class="job-card">
-                    {% if job.deadline %}
-                    <div class="job-card-deadline" title="Hạn nộp hồ sơ">
-                        <i class="far fa-clock"></i> {{ job.deadline.strftime('%d/%m/%Y') }}
-                    </div>
-                    {% endif %}
+            <article class="job-card" style="position: relative;">
+                {% if job.deadline %}
+                <div class="job-card-deadline" title="Hạn nộp hồ sơ">
+                    <i class="far fa-clock"></i> {{ job.deadline.strftime('%d/%m/%Y') }}
+                </div>
+                {% endif %}
 
-                    {% if current_user and not current_user.is_admin and not current_user.is_employer %}
-                    <button class="job-report-btn" title="Báo cáo tin này"
-                            data-bs-toggle="modal" data-bs-target="#reportModal"
-                            data-post-id="{{ job.id }}" data-post-title="{{ job.title }}">
-                        <i class="fas fa-flag"></i>
-                    </button>
-                    {% endif %}
+                {% if current_user and not current_user.is_admin and not current_user.is_employer %}
+                <button class="job-report-btn" title="Báo cáo tin này"
+                        data-bs-toggle="modal" data-bs-target="#reportModal"
+                        data-post-id="{{ job.id }}" data-post-title="{{ job.title }}">
+                    <i class="fas fa-flag"></i>
+                </button>
+                {% endif %}
 
-                    <div class="job-card-logo">
+                <div class="job-card-logo">
+                    <a href="{{ url_for('main.post_details', post_id=job.id) }}">
                         {% if job.recruiter.company.avatar_url %}
                             <img src="{{ job.recruiter.company.avatar_url }}" alt="{{ job.recruiter.company.name }}">
                         {% else %}
                             <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
                         {% endif %}
-                    </div>
+                    </a>
+                </div>
                     <div class="job-card-body">
-                        <h3>{{ job.title }}</h3>
-                        <p class="company-name">{{ job.recruiter.company.name }}</p>
+                        <h3>
+                            <a href="{{ url_for('main.post_details', post_id=job.id) }}" class="text-decoration-none" style="color: inherit;">
+                                {{ job.title }}
+                            </a>
+                        </h3>
+                        <p class="company-name">
+                            <a href="{{ url_for('main.company_details', company_id=job.recruiter.company_id) }}" class="text-decoration-none" style="color: var(--site-primary); font-weight: 600;">
+                                {{ job.recruiter.company.name }}
+                            </a>
+                        </p>
                         <div class="job-card-tags">
-                            <span>{{ job.salary_range or 'Thỏa thuận' }}</span>
-                            <span>{{ job.experience or 'Không yêu cầu kinh nghiệm' }}</span>
+                            <span>{{ job.salary_ref.name if job.salary_ref else 'Thỏa thuận' }}</span>
+                            <span>{{ job.experience_ref.name if job.experience_ref else 'Không yêu cầu kinh nghiệm' }}</span>
                         </div>
                     </div>
-                </article>
-            </a>
+            </article>
             {% else %}
             <div class="no-jobs">
                 <p>Không tìm thấy việc làm nào phù hợp.</p>
@@ -131,7 +140,7 @@
             {% endfor %}
         </div>
 
-        {% if pagination.pages > 1 %}
+        {% if pagination.pages >= 1 %}
         <nav class="pagination-container">
             <ul class="pagination">
                 <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
