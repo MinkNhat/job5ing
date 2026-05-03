@@ -18,7 +18,7 @@ from docx import Document
 
 from app import db
 from app.models import User, CV
-from app.models import User, CV, Post, PostReport
+from app.models import User, CV, Post, PostReport, Recruiter
 
 def submit_post_report(user, post_id, reason, description):
     post = db.session.get(Post, post_id)
@@ -56,7 +56,16 @@ PHONE_PATTERN = re.compile(r"^(?:\+84|0)\d{9,10}$")
 
 
 def inject_public_auth_context():
-    return {"current_user": get_logged_in_user()}
+    user = get_logged_in_user()
+    context = {
+        "current_user": user,
+        "view_mode": session.get("view_mode", "personal")
+    }
+    
+    if user and user.is_employer:
+        context["current_recruiter"] = db.session.get(Recruiter, user.id)
+        
+    return context
 
 
 def get_logged_in_user():
@@ -489,7 +498,16 @@ def preview_resume(files=None):
 
 def save_resume(user, form_data):
     try:
-        cv = CV.query.filter_by(user_id=user.id).first()
+        cv_id = form_data.get("cv_id")
+        action = form_data.get("action")
+        
+        if action == "create":
+            cv = CV(user_id=user.id)
+        elif cv_id:
+            cv = CV.query.filter_by(id=cv_id, user_id=user.id).first()
+        else:
+            cv = CV.query.filter_by(user_id=user.id).first()
+            
         if not cv:
             cv = CV(user_id=user.id)
 

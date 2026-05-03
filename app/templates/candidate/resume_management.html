@@ -1,0 +1,106 @@
+{% extends 'base_public.html' %} 
+
+{% block title %}Job5ing | QUẢN LÝ HỒ SƠ{% endblock %}
+
+{% block content %}
+<div class="dashboard-page py-4">
+    <div class="container">
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active">Quản lý hồ sơ</li>
+            </ol>
+        </nav>
+        
+        <!-- HEADER -->
+        <div class="dashboard-top-header mb-3 d-flex justify-content-between align-items-center">
+            <h2 class="h3 font-weight-bold text-uppercase">Quản lý hồ sơ ứng tuyển</h2>
+            <a href="{{ url_for('main.resume', action='create') }}" class="btn-orange text-decoration-none">
+                <i class="fas fa-plus me-2"></i> Tạo CV mới
+            </a>
+        </div>
+
+        <div class="content-card mt-0">
+            <!-- Toolbar (Standardized 4 columns) -->
+            <form class="filter-row-4" method="GET">
+                <div class="form-group">
+                    <label class="form-label">Tên hồ sơ</label>
+                    <input type="text" name="q" placeholder="Tìm kiếm..." class="form-control" value="{{ request.args.get('q', '') }}">
+                </div>
+                <div class="form-group"></div>
+                <div class="form-group"></div>
+                <div class="btn-group-filter">
+                    <button type="submit" class="btn-orange flex-grow-1">Lọc</button>
+                    <a href="{{ url_for('main.resume_management') }}" class="btn-outline-orange">Xóa lọc</a>
+                </div>
+            </form>
+
+            <div class="fixed-height-table">
+                <div class="cv-list-container">
+                    {% for cv in pagination.items %}
+                    <div class="content-card cv-item-card mt-0 mb-3 border">
+                        <div class="cv-item-header">
+                            <div class="cv-info-left">
+                                <div class="cv-icon-box">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div class="cv-info-details">
+                                    <h4 class="cv-title">{{ cv.title or 'CV không tên' }}</h4>
+                                    <span class="cv-meta">Cập nhật: {{ cv.last_modified.strftime('%d/%m/%Y') }}</span>
+                                </div>
+                            </div>
+                            <div class="cv-actions-col">
+                                {% if cv.cv_url %}
+                                    <a href="{{ cv.cv_url }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">Xem file</a>
+                                {% endif %}
+                                <a href="{{ url_for('main.resume', cv_id=cv.id) }}" class="btn btn-sm btn-light text-primary"><i class="far fa-edit"></i></a>
+                                <form action="#" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa CV này?')">
+                                    <button type="submit" class="btn btn-sm btn-light text-danger"><i class="far fa-trash-alt"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">Bạn chưa có hồ sơ nào.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Phân trang -->
+                <div class="pagination-container mt-auto">
+                    <nav>
+                        <ul class="pagination site-pagination justify-content-center">
+                            <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                                <a class="page-link" href="{{ url_for('main.resume_management', page=pagination.prev_num, q=request.args.get('q', '')) if pagination.has_prev else '#' }}">Trước</a>
+                            </li>
+                            {% if pagination.pages > 0 %}
+                                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                    {% if page_num %}
+                                        <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                            <a class="page-link" href="{{ url_for('main.resume_management', page=page_num, q=request.args.get('q', '')) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            {% endif %}
+                            <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                                <a class="page-link" href="{{ url_for('main.resume_management', page=pagination.next_num, q=request.args.get('q', '')) if pagination.has_next else '#' }}">Tiếp</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cv-item-card { border-radius: 12px; transition: 0.2s; }
+.cv-item-card:hover { border-color: var(--site-primary) !important; transform: translateY(-2px); }
+.cv-icon-box { width: 45px; height: 45px; background: #fff5ec; color: var(--site-primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+</style>
+{% endblock %}

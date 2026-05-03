@@ -3,7 +3,15 @@
 {% block title %}Job5ing | Kết nối Công ty{% endblock %}
 
 {% block content %}
-<section class="auth-centered-section" style="min-height: calc(100vh - 200px); display: flex; align-items: center;">
+<div class="container py-4">
+    <!-- BREADCRUMB -->
+    <nav aria-label="breadcrumb" class="breadcrumb-container">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Trang chủ</a></li>
+            <li class="breadcrumb-item active">Kết nối Công ty</li>
+        </ol>
+    </nav>
+    <section class="auth-centered-section" style="min-height: calc(100vh - 300px); display: flex; align-items: center;">
     <div class="container">
         <div class="auth-centered-shell">
             <div class="auth-centered-card" style="width: 45%;">

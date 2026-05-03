@@ -3,8 +3,15 @@
 {% block title %}Job5ing | {{ post.title }}{% endblock %}
 
 {% block content %}
-<div class="job-detail-page">
+<div class="job-detail-page py-4">
     <div class="container">
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Trang chủ</a></li>
+                <li class="breadcrumb-item active">{{ post.title }}</li>
+            </ol>
+        </nav>
         <div class="job-header-card">
             {% if post.deadline %}
             <div class="job-header-deadline">

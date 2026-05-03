@@ -7,61 +7,94 @@
         </a>
 
         <nav class="site-nav">
-            <a class="site-nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="{{ url_for('main.index') }}">Trang chủ</a>
-            <a class="site-nav-link" href="{{ url_for('main.index') }}#cv">Tạo CV</a>
-            <a class="site-nav-link" href="{{ url_for('main.index') }}#jobs">Đăng tuyển</a>
-            <a class="site-nav-link" href="{{ url_for('main.index') }}#contact">Liên hệ</a>
+            {% if current_user and current_user.is_admin %}
+                <a class="site-nav-link {% if request.endpoint == 'admin_panel.index' %}active{% endif %}" href="{{ url_for('admin_panel.index') }}">Tổng quan</a>
+                <a class="site-nav-link {% if request.endpoint == 'admin_panel.accounts' %}active{% endif %}" href="{{ url_for('admin_panel.accounts') }}">Tài khoản</a>
+                <a class="site-nav-link {% if request.endpoint == 'admin_panel.posts' %}active{% endif %}" href="{{ url_for('admin_panel.posts') }}">Tin tuyển dụng</a>
+                <a class="site-nav-link {% if request.endpoint == 'admin_panel.companies' %}active{% endif %}" href="{{ url_for('admin_panel.companies') }}">Công ty</a>
+            {% elif current_user and current_user.is_employer and view_mode == 'company' %}
+                <a class="site-nav-link {% if request.endpoint == 'recruiter.dashboard' %}active{% endif %}" href="{{ url_for('recruiter.dashboard') }}">Quản lý tin tuyển dụng</a>
+                {% if current_recruiter and current_recruiter.is_company_admin %}
+                    <a class="site-nav-link {% if request.endpoint == 'recruiter.manage_members' %}active{% endif %}" href="{{ url_for('recruiter.manage_members') }}">Quản lý tài khoản thành viên</a>
+                {% endif %}
+                <a class="site-nav-link" href="{{ url_for('main.switch_mode', mode='personal') }}">Chuyển sang tài khoản cá nhân</a>
+            {% else %}
+                <a class="site-nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="{{ url_for('main.index') }}">Trang chủ</a>
+                {% if current_user %}
+                    <a class="site-nav-link {% if request.endpoint == 'main.resume_management' %}active{% endif %}" href="{{ url_for('main.resume_management') }}">Quản lý CV</a>
+                    <a class="site-nav-link {% if request.endpoint == 'main.applied_jobs' %}active{% endif %}" href="{{ url_for('main.applied_jobs') }}">Việc làm đã ứng tuyển</a>
+                    {% if current_user.is_employer %}
+                        <a class="site-nav-link {% if request.endpoint == 'main.switch_mode' and request.view_args.get('mode') == 'company' %}active{% endif %}" href="{{ url_for('main.switch_mode', mode='company') }}">Chuyển sang tài khoản doanh nghiệp</a>
+                    {% else %}
+                        <a class="site-nav-link {% if request.endpoint == 'main.recruiter_request' %}active{% endif %}" href="{{ url_for('main.recruiter_request', action='post_job') }}">Đăng tuyển</a>
+                    {% endif %}
+                {% else %}
+                    <a class="site-nav-link {% if request.endpoint == 'main.resume' %}active{% endif %}" 
+                       href="{{ url_for('main.login', next=url_for('main.resume', action='create')) }}">
+                       Tạo CV
+                    </a>
+                    <a class="site-nav-link" 
+                       href="{{ url_for('main.login', next=url_for('main.recruiter_request', action='post_job')) }}">
+                       Đăng tuyển
+                    </a>
+                {% endif %}
+                <a class="site-nav-link" href="javascript:void(0)" onclick="scrollToFooter()">Liên hệ</a>
+            {% endif %}
         </nav>
 
         {% if current_user %}
-            {% if current_user.is_admin %}
-                <div class="site-actions">
-                    <a class="site-action-btn primary" href="{{ url_for('admin_panel.index') }}">Trang Admin</a>
-                    <form method="post" action="{{ url_for('main.logout') }}" style="display: inline;">
-                        <button type="submit" class="site-action-btn">Đăng xuất</button>
-                    </form>
-                </div>
-            {% else %}
-                <div class="dropdown site-user-menu">
-                    <a class="site-user-trigger text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <span class="site-user-avatar">
-                            {% if current_user.avatar_url %}
-                                <img src="{{ current_user.avatar_url }}" style="width: 32px; height: 32px; border-radius: 50%;">
-                            {% else %}
-                                <div style="width: 32px; height: 32px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">
-                                    {{ ((current_user.first_name or current_user.email or 'J')[:1]).upper() }}
-                                </div>
-                            {% endif %}
-                        </span>
-                        <span class="site-user-meta">
+            <div class="dropdown site-user-menu">
+                <a class="site-user-trigger text-decoration-none dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                    <span class="site-user-avatar">
+                        {% if current_user.is_employer and view_mode == 'company' and current_recruiter and current_recruiter.company and current_recruiter.company.avatar_url %}
+                            <img src="{{ current_recruiter.company.avatar_url }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                        {% elif current_user.avatar_url %}
+                            <img src="{{ current_user.avatar_url }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">
+                                {{ ((current_user.first_name or current_user.email or 'J')[:1]).upper() }}
+                            </div>
+                        {% endif %}
+                    </span>
+                    <span class="site-user-meta ms-2">
+                        {% if current_user.is_employer and view_mode == 'company' and current_recruiter and current_recruiter.company %}
+                            {{ current_recruiter.company.name }}
+                        {% else %}
                             Hi {{ current_user.first_name or 'User' }}
-                        </span>
-                    </a>
+                        {% endif %}
+                    </span>
+                </a>
 
-                    <ul class="dropdown-menu dropdown-menu-end">
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    {% if current_user.is_admin %}
+                        <li><a class="dropdown-item" href="{{ url_for('admin_panel.profile') }}">Thông tin cá nhân</a></li>
+                    {% elif current_user.is_employer and view_mode == 'company' %}
+                        <li><a class="dropdown-item" href="{{ url_for('recruiter.company') }}">Thông tin doanh nghiệp</a></li>
+                    {% else %}
                         <li><a class="dropdown-item" href="{{ url_for('main.account') }}">Thông tin cá nhân</a></li>
-                        {% if not current_user.is_employer %}
-                            <li><a class="dropdown-item" href="{{ url_for('main.resume') }}">Quản lý CV</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.applied_jobs') }}">Việc làm đã ứng tuyển</a></li>
-                        {% endif %}
-                        {% if current_user.is_employer %}
-                            <li><a class="dropdown-item" href="{{ url_for('main.recruiter_posts') }}">Chuyển sang tài khoản công ty</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('recruiter.index') }}">Chuyển sang tài khoản công ty</a></li>
-                        {% endif %}
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form method="post" action="{{ url_for('main.logout') }}">
-                                <button type="submit" class="dropdown-item text-danger">Đăng xuất</button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            {% endif %}
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" action="{{ url_for('main.logout') }}">
+                            <button type="submit" class="dropdown-item text-danger">Đăng xuất</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
         {% else %}
             <div class="site-actions">
                 <a class="site-action-btn" href="{{ url_for('main.register') }}">Đăng ký</a>
-                <a class="site-action-btn" href="{{ url_for('main.login') }}">Đăng nhập</a>
+                <a class="site-action-btn primary" href="{{ url_for('main.login') }}">Đăng nhập</a>
             </div>
         {% endif %}
     </div>
 </header>
+
+<script>
+function scrollToFooter() {
+    const footer = document.querySelector('.site-footer');
+    if (footer) {
+        footer.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+</script>

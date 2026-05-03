@@ -20,9 +20,16 @@ def create_app(test_config=None):
 
     @app.context_processor
     def inject_user_context():
+        from app.models import User, Recruiter
         user_id = session.get("user_id")
         user = db.session.get(User, user_id) if user_id else None
-        return {"current_user": user}
+        recruiter = Recruiter.query.get(user_id) if user_id else None
+        view_mode = session.get("view_mode", "personal")
+        return {
+            "current_user": user,
+            "current_recruiter": recruiter,
+            "view_mode": view_mode
+        }
 
     from app.admin.routes import admin_bp
     app.register_blueprint(admin_bp)

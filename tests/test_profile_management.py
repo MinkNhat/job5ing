@@ -5,9 +5,12 @@ from app.main.services import update_account_profile
 
 class ProfileManagementTestCase(unittest.TestCase):
     def setUp(self):
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        self.app = create_app({
+            'TESTING': True,
+            'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+            'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+            'SECRET_KEY': 'test-secret'
+        })
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
