@@ -12,13 +12,20 @@
                href="{{ url_for('recruiter.index') }}">
                 Tổng quan
             </a>
-            <a class="site-nav-link" href="#">
+            <a class="site-nav-link {% if request.endpoint == 'recruiter.dashboard' %}active{% endif %}" 
+               href="{{ url_for('recruiter.dashboard') }}">
                 Tin tuyển dụng
             </a>
             <a class="site-nav-link {% if request.endpoint == 'recruiter.company' %}active{% endif %}" 
                href="{{ url_for('recruiter.company') }}">
                 Công ty
             </a>
+            {% if current_recruiter and current_recruiter.is_company_admin %}
+            <a class="site-nav-link {% if request.endpoint == 'recruiter.manage_members' %}active{% endif %}" 
+               href="{{ url_for('recruiter.manage_members') }}">
+                Nhân viên
+            </a>
+            {% endif %}
         </nav>
 
         <div class="dropdown site-user-menu">
@@ -49,7 +56,10 @@
                     </h6>
                 </li>
                 <li><a class="dropdown-item" href="{{ url_for('recruiter.company') }}">Thông tin công ty</a></li>
-                <li><a class="dropdown-item" href="">Quản lý tuyển dụng</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('recruiter.dashboard') }}">Quản lý tuyển dụng</a></li>
+                {% if current_recruiter and current_recruiter.is_company_admin %}
+                <li><a class="dropdown-item" href="{{ url_for('recruiter.manage_members') }}">Quản lý nhân viên</a></li>
+                {% endif %}
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     <form method="post" action="{{ url_for('main.logout') }}">

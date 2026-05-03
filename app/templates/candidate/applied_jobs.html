@@ -1,14 +1,47 @@
 {% extends 'base_public.html' %}
 
-{% block title %}Việc làm đã ứng tuyển | Job5ing{% endblock %}
+{% block title %}Job5ing | VIỆC LÀM ĐÃ ỨNG TUYỂN{% endblock %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body p-4">
-            <h4 class="fw-bold mb-4 text-primary"><i class="fas fa-briefcase me-2"></i> Việc làm đã ứng tuyển</h4>
+<div class="dashboard-page py-4">
+    <div class="container">
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active">Việc làm đã ứng tuyển</li>
+            </ol>
+        </nav>
+        
+        <!-- HEADER -->
+        <div class="dashboard-top-header mb-3 d-flex justify-content-between align-items-center">
+            <h2 class="h3 font-weight-bold text-uppercase">Danh sách việc làm đã ứng tuyển</h2>
+        </div>
 
-            {% if applications %}
+        <div class="content-card mt-0">
+            <!-- Toolbar (Standardized 4 columns) -->
+            <form class="filter-row-4" method="GET">
+                <div class="form-group">
+                    <label class="form-label">Tên công việc</label>
+                    <input type="text" name="q" placeholder="Tìm kiếm..." class="form-control" value="{{ request.args.get('q', '') }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trạng thái</label>
+                    <select name="status" class="form-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="RECEIVED" {% if request.args.get('status') == 'RECEIVED' %}selected{% endif %}>Đã nộp</option>
+                        <option value="INTERVIEW" {% if request.args.get('status') == 'INTERVIEW' %}selected{% endif %}>Phỏng vấn</option>
+                        <option value="APPROVED" {% if request.args.get('status') == 'APPROVED' %}selected{% endif %}>Đồng ý</option>
+                        <option value="REJECT" {% if request.args.get('status') == 'REJECT' %}selected{% endif %}>Từ chối</option>
+                    </select>
+                </div>
+                <div class="form-group"></div>
+                <div class="btn-group-filter">
+                    <button type="submit" class="btn-orange flex-grow-1">Lọc</button>
+                    <a href="{{ url_for('main.applied_jobs') }}" class="btn-outline-orange">Xóa lọc</a>
+                </div>
+            </form>
+
+            <div class="fixed-height-table">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
@@ -17,49 +50,75 @@
                                 <th>Công ty</th>
                                 <th>Ngày nộp</th>
                                 <th>Trạng thái</th>
-                                <th>Hành động</th>
+                                <th class="text-end">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for app in applications %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('main.post_details', post_id=app.post.id) }}" class="text-decoration-none fw-semibold text-dark">
-                                            {{ app.post.title }}
-                                        </a>
-                                    </td>
-                                    <td>{{ app.post.recruiter.company.name }}</td>
-                                    <td>{{ app.applied_at.strftime('%d/%m/%Y') }}</td>
-                                    <td>
-                                        {% if app.status == 'RECEIVED' %}
-                                            <span class="badge bg-info text-white">Đã nhận hồ sơ</span>
-                                        {% elif app.status == 'INTERVIEW' %}
-                                            <span class="badge bg-warning text-dark">Mời phỏng vấn</span>
-                                        {% elif app.status == 'APPROVED' %}
-                                            <span class="badge bg-success text-white">Trúng tuyển</span>
-                                        {% elif app.status == 'REJECT' %}
-                                            <span class="badge bg-danger text-white">Từ chối</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ app.status }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{{ url_for('main.post_details', post_id=app.post.id) }}" class="btn btn-sm btn-outline-primary">
-                                            Xem chi tiết
-                                        </a>
-                                    </td>
-                                </tr>
+                            {% for app in pagination.items %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ app.post.title }}</div>
+                                    <small class="text-muted">{{ app.post.experience }}</small>
+                                </td>
+                                <td>{{ app.post.recruiter.company.name }}</td>
+                                <td>{{ app.applied_at.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    {% if app.status == 'RECEIVED' %}
+                                        <span class="text-primary fw-bold">Đã nhận hồ sơ</span>
+                                    {% elif app.status == 'INTERVIEW' %}
+                                        <span class="text-warning fw-bold">Phỏng vấn</span>
+                                    {% elif app.status == 'APPROVED' %}
+                                        <span class="text-success fw-bold">Đồng ý</span>
+                                    {% elif app.status == 'REJECT' %}
+                                        <span class="text-danger fw-bold">Từ chối</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ app.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('main.post_details', post_id=app.post.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        Chi tiết
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    Không tìm thấy dữ liệu phù hợp.
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="No data" style="width: 150px; opacity: 0.5;" class="mb-3">
-                    <p class="text-muted fs-5">Bạn chưa ứng tuyển vào công việc nào.</p>
-                    <a href="{{ url_for('main.index') }}" class="btn btn-primary mt-2">Tìm việc ngay</a>
+
+                <!-- Phân trang -->
+                <div class="pagination-container mt-auto">
+                    <nav>
+                        <ul class="pagination site-pagination justify-content-center">
+                            <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                                <a class="page-link" href="{{ url_for('main.applied_jobs', page=pagination.prev_num, q=request.args.get('q', ''), status=request.args.get('status', '')) if pagination.has_prev else '#' }}">Trước</a>
+                            </li>
+                            {% if pagination.pages > 0 %}
+                                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                    {% if page_num %}
+                                        <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                            <a class="page-link" href="{{ url_for('main.applied_jobs', page=page_num, q=request.args.get('q', ''), status=request.args.get('status', '')) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            {% endif %}
+                            <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                                <a class="page-link" href="{{ url_for('main.applied_jobs', page=pagination.next_num, q=request.args.get('q', ''), status=request.args.get('status', '')) if pagination.has_next else '#' }}">Tiếp</a>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
-            {% endif %}
+            </div>
         </div>
     </div>
 </div>

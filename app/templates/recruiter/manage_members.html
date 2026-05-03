@@ -1,0 +1,172 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Job5ing | QUẢN LÝ NHÂN VIÊN{% endblock %}
+
+{% block content %}
+<div class="dashboard-page py-4">
+    <div class="container">
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active">Quản lý nhân viên</li>
+            </ol>
+        </nav>
+        
+        <!-- HEADER -->
+        <div class="dashboard-top-header mb-3 d-flex justify-content-between align-items-center">
+            <h2 class="h3 font-weight-bold text-uppercase">Quản lý nhân viên</h2>
+        </div>
+
+        <div class="content-card mt-0">
+            <!-- Toolbar Tìm kiếm & Lọc (Standardized 4 columns) -->
+            <form class="filter-row-4" method="GET">
+                <div class="form-group">
+                    <label class="form-label">Tên hoặc Email</label>
+                    <input type="text" name="q" placeholder="Tìm kiếm..." class="form-control" value="{{ request.args.get('q', '') }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vai trò</label>
+                    <select name="role" class="form-select">
+                        <option value="">Tất cả vai trò</option>
+                        <option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>HR Manager</option>
+                        <option value="staff" {% if request.args.get('role') == 'staff' %}selected{% endif %}>Nhân viên</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trạng thái</label>
+                    <select name="status" class="form-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="approved" {% if request.args.get('status') == 'approved' %}selected{% endif %}>Đã phê duyệt</option>
+                        <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Chờ phê duyệt</option>
+                    </select>
+                </div>
+                <div class="btn-group-filter">
+                    <button type="submit" class="btn-orange flex-grow-1">Lọc</button>
+                    <a href="{{ url_for('recruiter.manage_members') }}" class="btn-outline-orange">Xóa lọc</a>
+                </div>
+            </form>
+
+            <!-- Danh sách Nhân viên -->
+            <div class="fixed-height-table">
+                <div class="table-responsive">
+                    <table class="table table-hover site-table align-middle">
+                        <thead>
+                            <tr>
+                                <th width="80">ID</th>
+                                <th>Tên nhân viên</th>
+                                <th>Chức vụ</th>
+                                <th>Email</th>
+                                <th>Trạng thái</th>
+                                <th width="150">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r, u in pagination.items %}
+                            <tr>
+                                <td>{{ u.id }}</td>
+                                <td class="fw-bold text-dark">
+                                    {{ u.first_name }} {{ u.last_name }}
+                                </td>
+                                <td>
+                                    <span class="{{ 'text-primary fw-bold' if r.is_company_admin else '' }}">
+                                        {{ r.position or 'Nhân viên' }}
+                                    </span>
+                                </td>
+                                <td>{{ u.email }}</td>
+                                <td>
+                                    {% if r.is_approved %}
+                                        <span class="text-success fw-bold">Đã phê duyệt</span>
+                                    {% else %}
+                                        <span class="text-danger fw-bold">Chưa phê duyệt</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center" style="gap: 15px;">
+                                        <!-- Phê duyệt (Tick) -->
+                                        {% if not r.is_approved %}
+                                        <form method="POST" action="{{ url_for('recruiter.approve_company_member', user_id=u.id) }}">
+                                            <button type="submit" class="btn-icon text-success" title="Phê duyệt">
+                                                <i class="fas fa-check-circle"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                            <div class="btn-icon text-muted" style="cursor: default; opacity: 0.3;">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Thay đổi quyền (Admin/Star) -->
+                                        {% if u.id != recruiter.user_id %}
+                                        <form method="POST" action="{{ url_for('recruiter.toggle_admin', user_id=u.id) }}">
+                                            <button type="submit" class="btn-icon {{ 'text-warning' if r.is_company_admin else 'text-muted' }}" 
+                                                    title="{{ 'Hạ quyền xuống Nhân viên' if r.is_company_admin else 'Cấp quyền HR Manager' }}">
+                                                <i class="fas fa-star"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                            <div class="btn-icon text-warning" title="Bạn là Quản trị viên" style="cursor: default;">
+                                                <i class="fas fa-star"></i>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Xóa (Trash) -->
+                                        <form method="POST" action="{{ url_for('recruiter.delete_company_member', user_id=u.id) }}" 
+                                              onsubmit="return confirm('{{ 'Bạn có chắc muốn rời khỏi công ty này?' if u.id == recruiter.user_id else 'Bạn có chắc chắn muốn xóa nhân viên này khỏi công ty?' }}')">
+                                            <button type="submit" class="btn-icon text-danger" title="{{ 'Rời khỏi công ty' if u.id == recruiter.user_id else 'Xóa nhân viên' }}">
+                                                <i class="far fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <p class="text-muted">Không tìm thấy nhân viên nào.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phân trang -->
+                <div class="pagination-container mt-auto">
+                    <nav>
+                        <ul class="pagination site-pagination justify-content-center">
+                            <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                                <a class="page-link" href="{{ url_for('recruiter.manage_members', page=pagination.prev_num, q=request.args.get('q', ''), role=request.args.get('role', ''), status=request.args.get('status', '')) if pagination.has_prev else '#' }}">Trước</a>
+                            </li>
+                            {% if pagination.pages > 0 %}
+                                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                    {% if page_num %}
+                                        <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                            <a class="page-link" href="{{ url_for('recruiter.manage_members', page=page_num, q=request.args.get('q', ''), role=request.args.get('role', ''), status=request.args.get('status', '')) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            {% endif %}
+                            <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                                <a class="page-link" href="{{ url_for('recruiter.manage_members', page=pagination.next_num, q=request.args.get('q', ''), role=request.args.get('role', ''), status=request.args.get('status', '')) if pagination.has_next else '#' }}">Tiếp</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.btn-icon {
+    background: none; border: none; padding: 0; font-size: 1.2rem;
+    transition: transform 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center;
+}
+.btn-icon:hover:not(.text-muted) { transform: scale(1.2); }
+.btn-icon.text-muted:hover { opacity: 0.8; }
+</style>
+{% endblock %}

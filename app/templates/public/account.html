@@ -1,212 +1,116 @@
-{% extends 'base.html' %}
+{% extends 'base_public.html' %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/public/account.css') }}">
-{% endblock %}
-
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/account.js') }}"></script>
-{% endblock %}
+{% block title %}Job5ing | THÔNG TIN TÀI KHOẢN{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="content-card">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h5 class="fw-bold m-0">Hồ sơ cá nhân</h5>
-            </div>
-        </div>
+<div class="public-page py-4">
+    <div class="container">
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active">Thông tin tài khoản</li>
+            </ol>
+        </nav>
+
+        <h2 class="h3 fw-bold text-uppercase mb-4">Hồ sơ cá nhân</h2>
 
         <div class="row g-4">
+            <!-- Sidebar -->
             <div class="col-lg-4">
-                <div class="profile-summary-card">
-                    <div class="profile-avatar">
+                <div class="content-card mt-0 text-center">
+                    <div class="account-avatar mb-3 mx-auto" style="width: 100px; height: 100px; border-radius: 50%;">
                         {% if user.avatar_url %}
                             <img src="{{ user.avatar_url }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
                         {% else %}
-                            {{ ((user.first_name or user.email or 'J')[:1]).upper() }}
+                            <span style="font-size: 2rem;">{{ ((user.last_name or user.email or 'J')[:1]).upper() }}</span>
                         {% endif %}
                     </div>
-                    <h6 class="fw-bold mb-1">{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or 'Nhà tuyển dụng' if user.is_employer else 'Ứng viên' }}</h6>
+                    <h5 class="fw-bold mb-1">{{ ((user.last_name or '') ~ ' ' ~ (user.first_name or '')).strip() or 'Thành viên' }}</h5>
                     <p class="text-muted small mb-3">{{ user.email }}</p>
                     <div class="d-flex gap-2 justify-content-center">
-                        <span class="badge-role-blue">{{ 'Nhà tuyển dụng' if user.is_employer else 'Ứng viên' }}</span>
+                        <span class="badge {{ 'bg-primary' if user.is_employer else 'bg-secondary' }}">{{ 'Nhà tuyển dụng' if user.is_employer else 'Ứng viên' }}</span>
                         {% if user.is_active %}
-                            <span class="badge-status-active">Hoạt động</span>
+                            <span class="badge bg-success">Hoạt động</span>
                         {% else %}
-                            <span class="badge-status-inactive">Tạm khóa</span>
+                            <span class="badge bg-danger">Tạm khóa</span>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
+            <!-- Form -->
             <div class="col-lg-8">
-                <form method="post" class="row g-3" enctype="multipart/form-data">
-                    <div class="col-md-6">
-                        <label for="last_name" class="form-label">Họ</label>
-                        <input
-                            type="text"
-                            id="last_name"
-                            name="last_name"
-                            class="form-control"
-                            value="{{ request.form.get('last_name', user.last_name or '') }}"
-                            required
-                        >
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="first_name" class="form-label">Tên</label>
-                        <input
-                            type="text"
-                            id="first_name"
-                            name="first_name"
-                            class="form-control"
-                            value="{{ request.form.get('first_name', user.first_name or '') }}"
-                            required
-                        >
-                    </div>
-
-                    <div class="col-12">
-                        <label for="email" class="form-label">Email</label>
-                        <input
-                            type="email"
-                            id="email"
-                            class="form-control"
-                            value="{{ user.email }}"
-                            disabled
-                        >
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="phone" class="form-label">Số điện thoại</label>
-                        <input
-                            type="text"
-                            id="phone"
-                            name="phone"
-                            class="form-control"
-                            value="{{ request.form.get('phone', user.phone or '') }}"
-                        >
-                    </div>
-                    <div class="col-md-6"></div>
-
-                    <div class="col-md-6">
-                        <label for="sex" class="form-label">Giới tính</label>
-                        {% set selected_sex = request.form.get('sex', user.sex or '') %}
-                        <select id="sex" name="sex" class="form-select">
-                            <option value="">Chọn giới tính</option>
-                            <option value="Nam" {% if selected_sex == 'Nam' %}selected{% endif %}>Nam</option>
-                            <option value="Nữ" {% if selected_sex == 'Nữ' %}selected{% endif %}>Nữ</option>
-                            <option value="Khác" {% if selected_sex == 'Khác' %}selected{% endif %}>Khác</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="date_of_birth" class="form-label">Ngày sinh</label>
-                        <input
-                            type="date"
-                            id="date_of_birth"
-                            name="date_of_birth"
-                            class="form-control"
-                            value="{{ user.date_of_birth.isoformat() if user.date_of_birth else '' }}"
-                        >
-                    </div>
-
-                    <div class="col-12">
-                        <label for="address" class="form-label">Địa chỉ</label>
-                        <textarea
-                            id="address"
-                            name="address"
-                            class="form-control"
-                            rows="2"
-                            placeholder="Thêm địa chỉ liên hệ"
-                        >{{ request.form.get('address', user.address or '') }}</textarea>
-                    </div>
-
-                    <!-- Phần thông tin CV chuyên nghiệp -->
-                    <div class="col-12 mt-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <hr class="flex-grow-1">
-                            <span class="mx-3 fw-bold text-muted text-uppercase small">Thông tin hồ sơ chuyên môn</span>
-                            <hr class="flex-grow-1">
+                <div class="content-card mt-0">
+                    <form method="post" class="row g-3" enctype="multipart/form-data">
+                        <div class="col-md-6">
+                            <label class="form-label">Họ</label>
+                            <input type="text" name="last_name" class="form-control" value="{{ request.form.get('last_name', user.last_name or '') }}" required>
                         </div>
-                    </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tên</label>
+                            <input type="text" name="first_name" class="form-control" value="{{ request.form.get('first_name', user.first_name or '') }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="text" name="phone" class="form-control" value="{{ request.form.get('phone', user.phone or '') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Giới tính</label>
+                            {% set selected_sex = request.form.get('sex', user.sex or '') %}
+                            <select name="sex" class="form-select">
+                                <option value="">Chọn giới tính</option>
+                                <option value="Nam" {% if selected_sex == 'Nam' %}selected{% endif %}>Nam</option>
+                                <option value="Nữ" {% if selected_sex == 'Nữ' %}selected{% endif %}>Nữ</option>
+                                <option value="Khác" {% if selected_sex == 'Khác' %}selected{% endif %}>Khác</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày sinh</label>
+                            <input type="date" name="date_of_birth" class="form-control" value="{{ user.date_of_birth.isoformat() if user.date_of_birth else '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Địa chỉ</label>
+                            <textarea name="address" class="form-control" rows="2">{{ request.form.get('address', user.address or '') }}</textarea>
+                        </div>
 
-                    {% set cv = user.cvs[0] if user.cvs else None %}
-                    
-                    <div class="col-12">
-                        <label for="cv_title" class="form-label">Tiêu đề hồ sơ</label>
-                        <input
-                            type="text"
-                            id="cv_title"
-                            name="cv_title"
-                            class="form-control"
-                            placeholder="Ví dụ: Lập trình viên Python / Nhân viên Kế toán"
-                            value="{{ request.form.get('cv_title', cv.title if cv else '') }}"
-                        >
-                    </div>
+                        <!-- Professional Info -->
+                        <div class="col-12 mt-4">
+                            <h6 class="fw-bold text-muted text-uppercase small border-bottom pb-2">Thông tin hồ sơ chuyên môn</h6>
+                        </div>
 
-                    <div class="col-12">
-                        <label for="cv_summary" class="form-label">Giới thiệu ngắn</label>
-                        <textarea
-                            id="cv_summary"
-                            name="cv_summary"
-                            class="form-control"
-                            rows="3"
-                            placeholder="Tóm tắt ngắn gọn về kinh nghiệm và mục tiêu nghề nghiệp của bạn..."
-                        >{{ request.form.get('cv_summary', cv.summary if cv else '') }}</textarea>
-                    </div>
+                        {% set cv = user.cvs[0] if user.cvs else None %}
+                        <div class="col-12">
+                            <label class="form-label">Tiêu đề hồ sơ</label>
+                            <input type="text" name="cv_title" class="form-control" placeholder="Ví dụ: Lập trình viên Python" value="{{ request.form.get('cv_title', cv.title if cv else '') }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Giới thiệu ngắn</label>
+                            <textarea name="cv_summary" class="form-control" rows="3">{{ request.form.get('cv_summary', cv.summary if cv else '') }}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Học vấn</label>
+                            <textarea name="cv_education" class="form-control" rows="3">{{ request.form.get('cv_education', cv.education if cv else '') }}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Kinh nghiệm làm việc</label>
+                            <textarea name="cv_experience" class="form-control" rows="4">{{ request.form.get('cv_experience', cv.experience if cv else '') }}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ảnh đại diện mới</label>
+                            <input type="file" name="avatar" class="form-control" accept="image/*">
+                        </div>
 
-                    <div class="col-12">
-                        <label for="cv_education" class="form-label">Học vấn</label>
-                        <textarea
-                            id="cv_education"
-                            name="cv_education"
-                            class="form-control"
-                            rows="3"
-                            placeholder="Thông tin về trường học, bằng cấp..."
-                        >{{ request.form.get('cv_education', cv.education if cv else '') }}</textarea>
-                    </div>
-
-                    <div class="col-12">
-                        <label for="cv_experience" class="form-label">Kinh nghiệm làm việc</label>
-                        <textarea
-                            id="cv_experience"
-                            name="cv_experience"
-                            class="form-control"
-                            rows="4"
-                            placeholder="Chi tiết các công việc đã từng đảm nhận..."
-                        >{{ request.form.get('cv_experience', cv.experience if cv else '') }}</textarea>
-                    </div>
-
-                    <div class="col-12">
-                        <label for="cv_skills" class="form-label">Kỹ năng chuyên môn</label>
-                        <textarea
-                            id="cv_skills"
-                            name="cv_skills"
-                            class="form-control"
-                            rows="2"
-                            placeholder="Ví dụ: Python, SQL, Giao tiếp, Tiếng Anh (Ngăn cách bằng dấu phẩy)"
-                        >{{ request.form.get('cv_skills', cv.skills if cv else '') }}</textarea>
-                    </div>
-
-                    <div class="col-12 mt-3">
-                        <label for="avatar" class="form-label">Ảnh đại diện</label>
-                        <input
-                            type="file"
-                            id="avatar"
-                            name="avatar"
-                            class="form-control"
-                            accept="image/*"
-                        >
-                    </div>
-
-                    <div class="col-12 d-flex justify-content-end">
-                        <button type="submit" class="btn btn-filter">Lưu hồ sơ</button>
-                    </div>
-                </form>
+                        <div class="col-12 d-flex justify-content-end gap-2 mt-3">
+                            <button type="submit" class="btn-orange">Lưu hồ sơ</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
-

@@ -59,6 +59,33 @@ def get_dashboard_stats(recruiter_id):
         "approved_candidates": approved_candidates,
     }
 
+def get_company_members(company_id):
+    return db.session.query(Recruiter, User).join(User, Recruiter.user_id == User.id).filter(Recruiter.company_id == company_id).all()
+
+def approve_member(recruiter_id, company_id):
+    recruiter = db.session.get(Recruiter, recruiter_id)
+    if recruiter and recruiter.company_id == company_id:
+        recruiter.is_approved = True
+        db.session.commit()
+        return True
+    return False
+
+def delete_member(recruiter_id, company_id):
+    recruiter = db.session.get(Recruiter, recruiter_id)
+    if recruiter and recruiter.company_id == company_id:
+        db.session.delete(recruiter)
+        db.session.commit()
+        return True
+    return False
+
+def toggle_member_admin(recruiter_id, company_id):
+    recruiter = db.session.get(Recruiter, recruiter_id)
+    if recruiter and recruiter.company_id == company_id:
+        recruiter.is_company_admin = not recruiter.is_company_admin
+        db.session.commit()
+        return True, recruiter.is_company_admin
+    return False, None
+
 def get_company_info(company_id):
     return db.session.get(Company, company_id)
 

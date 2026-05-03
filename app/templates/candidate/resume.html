@@ -8,12 +8,36 @@
 
 {% block extra_js %}
     <script src="{{ url_for('static', filename='js/resume.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'create') {
+                const uploadSection = document.getElementById('upload-section');
+                if (uploadSection) {
+                    uploadSection.scrollIntoView({ behavior: 'smooth' });
+                    // Thêm hiệu ứng highlight nhẹ để người dùng chú ý
+                    uploadSection.style.boxShadow = "0 0 15px rgba(255, 149, 80, 0.5)";
+                    setTimeout(() => {
+                        uploadSection.style.boxShadow = "";
+                    }, 2000);
+                }
+            }
+        });
+    </script>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="content-card">
-        <h5 class="fw-bold mb-4">Quản lý CV</h5>
+<div class="public-page py-4">
+    <div class="container">
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.resume_management') }}">Quản lý hồ sơ</a></li>
+                <li class="breadcrumb-item active">{{ 'Tạo mới' if not cv.id else 'Chỉnh sửa' }}</li>
+            </ol>
+        </nav>
+        <div class="content-card mt-0">
+            <h2 class="h3 fw-bold text-uppercase mb-4">Chi tiết hồ sơ</h2>
 
         <div class="resume-container">
             <div class="resume-uploader">
@@ -92,6 +116,8 @@
                         >{{ cv.experience or '' }}</textarea>
                     </div>
                     
+                    <input type="hidden" name="action" value="{{ request.args.get('action') or '' }}">
+                    <input type="hidden" name="cv_id" value="{{ cv.id or '' }}">
                     <input type="hidden" id="cv_url" name="cv_url" value="{{ cv.cv_url or '' }}">
 
                     <div class="button-group">

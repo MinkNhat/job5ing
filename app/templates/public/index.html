@@ -3,6 +3,37 @@
 {% block title %}Job5ing | Trang chủ{% endblock %}
 
 {% block content %}
+<!-- Modal thông báo phê duyệt -->
+{% if session.get('show_approval_modal') %}
+<div id="approvalModal" class="custom-modal-overlay">
+    <div class="custom-modal-content" style="max-width: 500px; text-align: center; padding: 30px;">
+        <div class="modal-body">
+            <div style="font-size: 50px; color: #f8bb86; margin-bottom: 20px;">
+                <i class="fas fa-clock"></i>
+            </div>
+            {% if session.get('show_approval_modal') == 'recruiter' %}
+                <h3 style="margin-bottom: 15px;">Chưa được phê duyệt gia nhập</h3>
+                <p style="color: #666; margin-bottom: 25px;">Yêu cầu gia nhập công ty của bạn chưa được Admin của công ty phê duyệt. Vui lòng chờ đợi hoặc thay đổi thông tin yêu cầu.</p>
+            {% elif session.get('show_approval_modal') == 'company' %}
+                <h3 style="margin-bottom: 15px;">Công ty chờ phê duyệt</h3>
+                <p style="color: #666; margin-bottom: 25px;">Công ty của bạn đang chờ quản trị viên hệ thống phê duyệt. Bạn có muốn tiếp tục chờ hay thay đổi thông tin đăng ký?</p>
+            {% endif %}
+        </div>
+        <div class="modal-footer" style="border: none; justify-content: center; gap: 15px;">
+            <button type="button" class="btn-cancel" onclick="closeApprovalModal()" style="margin: 0; padding: 10px 20px;">Tiếp tục chờ đợi</button>
+            <a href="{{ url_for('main.recruiter_request') }}" class="auth-centered-submit" style="text-decoration: none; padding: 10px 20px;">Thay đổi thông tin</a>
+        </div>
+    </div>
+</div>
+<script>
+    function closeApprovalModal() {
+        document.getElementById('approvalModal').style.display = 'none';
+        // Xóa session flag qua AJAX để không hiện lại khi refresh
+        fetch("{{ url_for('main.clear_approval_session') }}", { method: 'POST' });
+    }
+</script>
+{% endif %}
+
 <section class="hero-section">
     <div class="container">
         <div class="hero-banner-image">
