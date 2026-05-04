@@ -31,7 +31,7 @@
                     <h1>{{ post.title }}</h1>
                     <div class="job-meta-header">
                         <div class="detail-tag salary-tag">
-                            <i class="fas fa-coins"></i> {{ post.salary_range or 'Thỏa thuận' }}
+                            <i class="fas fa-coins"></i> {{ post.salary_ref.name if post.salary_ref else 'Thỏa thuận' }}
                         </div>
                         <span class="separator">|</span>
                         <span class="update-text">Cập nhật: {{ post.last_modified.strftime('%d/%m/%Y') if post.last_modified else post.created_at.strftime('%d/%m/%Y') }}</span>
@@ -82,7 +82,7 @@
                                             <i class="fas fa-map-marker-alt me-1"></i> Địa điểm: {{ post.recruiter.company.location or 'Chưa cập nhật' }}
                                         </p>
                                         <p class="mb-0 small fw-semibold" style="color: #00b14f;">
-                                            <i class="fas fa-money-bill-wave me-1"></i> Mức lương: {{ post.salary_range or 'Thỏa thuận' }}
+                                            <i class="fas fa-money-bill-wave me-1"></i> Mức lương: {{ post.salary_ref.name if post.salary_ref else 'Thỏa thuận' }}
                                         </p>
                                     </div>
                                 </div>
@@ -201,7 +201,9 @@
                     <div class="jd-section">
                         <h3>Yêu cầu kỹ năng</h3>
                         <div class="jd-content">
-                            {{ post.skills | replace('\n', '<br>') | safe }}
+                            {% for skill in post.skills %}
+                                <span class="skill-tag" style="display: inline-block; background: #f0f2f5; padding: 4px 12px; border-radius: 4px; margin-right: 8px; margin-bottom: 8px;">{{ skill.skill_name }}</span>
+                            {% endfor %}
                         </div>
                     </div>
                     {% endif %}
@@ -209,7 +211,7 @@
                     <div class="jd-section">
                         <h3>Yêu cầu kinh nghiệm</h3>
                         <div class="jd-content">
-                            {{ post.experience or 'Không yêu cầu kinh nghiệm.' }}
+                            {{ post.experience_ref.name if post.experience_ref else 'Không yêu cầu kinh nghiệm.' }}
                         </div>
                     </div>
                 </div>
@@ -227,7 +229,7 @@
                     <h3>{{ post.recruiter.company.name }}</h3>
                     <ul class="company-meta-list">
                         <li><i class="fas fa-map-marker-alt"></i> {{ post.recruiter.company.location or 'Chưa cập nhật địa điểm' }}</li>
-                        <li><i class="fas fa-users"></i> Quy mô: {{ post.recruiter.company.scale or 'Chưa cập nhật' }}</li>
+                        <li><i class="fas fa-users"></i> Quy mô: {{ post.recruiter.company.scale_ref.name if post.recruiter.company.scale_ref else 'Chưa cập nhật' }}</li>
                         {% if post.recruiter.company.website %}
                         <li><i class="fas fa-globe"></i> <a href="{{ post.recruiter.company.website }}" target="_blank">{{ post.recruiter.company.website }}</a></li>
                         {% endif %}
@@ -250,7 +252,7 @@
                             </div>
                             <div class="rel-job-info">
                                 <strong>{{ rel_post.title }}</strong>
-                                <span class="rel-job-salary">{{ rel_post.salary_range or 'Thỏa thuận' }}</span>
+                                <span class="rel-job-salary">{{ rel_post.salary_ref.name if rel_post.salary_ref else 'Thỏa thuận' }}</span>
                                 <span class="rel-job-loc">{{ rel_post.recruiter.company.location }}</span>
                             </div>
                         </a>

@@ -90,7 +90,7 @@
                                     </div>
                                     <div>
                                         <div class="fw-bold text-uppercase">{{ app.cv.user.last_name }} {{ app.cv.user.first_name }}</div>
-                                        <small class="text-muted">{{ app.cv.skills | truncate(50) if app.cv.skills else 'Chưa cập nhật kỹ năng' }}</small>
+                                        <small class="text-muted">{{ app.cv.skills|map(attribute='skill_name')|join(', ') | truncate(50) if app.cv.skills else 'Chưa cập nhật kỹ năng' }}</small>
                                     </div>
                                 </div>
                             </td>

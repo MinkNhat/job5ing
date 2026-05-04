@@ -213,11 +213,12 @@ def get_posts(page=1, keyword=None, status=None, is_reported=None):
 
     if keyword:
         keyword_filter = f"%{keyword}%"
-        query = query.filter(
+        from app.models import PostSkill
+        query = query.join(PostSkill, isouter=True).filter(
             or_(
                 Post.title.ilike(keyword_filter),
                 Post.description.ilike(keyword_filter),
-                Post.skills.ilike(keyword_filter)
+                PostSkill.skill_name.ilike(keyword_filter)
             )
         )
 

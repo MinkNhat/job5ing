@@ -100,6 +100,10 @@
                             <textarea name="cv_experience" class="form-control" rows="4">{{ request.form.get('cv_experience', cv.experience if cv else '') }}</textarea>
                         </div>
                         <div class="col-12">
+                            <label class="form-label">Kỹ năng</label>
+                            <input type="text" name="cv_skills" class="form-control" placeholder="Ví dụ: Python, Flask, SQL" value="{{ request.form.get('cv_skills', cv.skills|map(attribute='skill_name')|join(', ') if cv and cv.skills else '') }}">
+                        </div>
+                        <div class="col-12">
                             <label class="form-label">Ảnh đại diện mới</label>
                             <input type="file" name="avatar" class="form-control" accept="image/*">
                         </div>

@@ -91,7 +91,7 @@
                             class="form-control form-textarea"
                             placeholder="VD: Python, JavaScript, React, SQL, Django..."
                             rows="3"
-                        >{{ cv.skills or '' }}</textarea>
+                        >{{ cv.skills|map(attribute='skill_name')|join(', ') if cv.skills else '' }}</textarea>
                     </div>
 
                     <div class="cv-field">

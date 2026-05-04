@@ -139,7 +139,7 @@
                 <li class="page-item {% if not posts.has_prev %}disabled{% endif %}">
                     <a
                         class="page-link"
-                        href="{{ url_for('admin_panel.posts', page=posts.prev_num, **request.args) if posts.has_prev else '#' }}"
+                        href="{{ url_for('admin_panel.posts', page=posts.prev_num, keyword=request.args.get('keyword'), status=request.args.get('status'), is_reported=request.args.get('is_reported')) if posts.has_prev else '#' }}"
                     >
                         Trước
                     </a>
@@ -149,7 +149,7 @@
                         <li class="page-item {% if page_num == posts.page %}active{% endif %}">
                             <a
                                 class="page-link"
-                                href="{{ url_for('admin_panel.posts', page=page_num, **request.args) }}"
+                                href="{{ url_for('admin_panel.posts', page=page_num, keyword=request.args.get('keyword'), status=request.args.get('status'), is_reported=request.args.get('is_reported')) }}"
                             >
                                 {{ page_num }}
                             </a>
@@ -163,7 +163,7 @@
                 <li class="page-item {% if not posts.has_next %}disabled{% endif %}">
                     <a
                         class="page-link"
-                        href="{{ url_for('admin_panel.posts', page=posts.next_num, **request.args) if posts.has_next else '#' }}"
+                        href="{{ url_for('admin_panel.posts', page=posts.next_num, keyword=request.args.get('keyword'), status=request.args.get('status'), is_reported=request.args.get('is_reported')) if posts.has_next else '#' }}"
                     >
                         Sau
                     </a>

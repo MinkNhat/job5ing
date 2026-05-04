@@ -156,9 +156,17 @@ def manage_job(job_id=None):
 
         job.title = data.get('title')
         job.description = data.get('description')
-        job.skills = data.get('skills')
-        job.experience = data.get('experience')
-        job.salary_range = data.get('salary_range')
+        
+        # Xử lý skills
+        from app.models import PostSkill
+        skills_raw = data.get('skills', '').strip()
+        PostSkill.query.filter_by(post_id=job.id).delete()
+        if skills_raw:
+            for s_name in [s.strip() for s in skills_raw.split(',') if s.strip()]:
+                db.session.add(PostSkill(post_id=job.id, skill_name=s_name))
+
+        job.experience_id = data.get('experience', type=int) or None
+        job.salary_id = data.get('salary', type=int) or None
         job.deadline = deadline
         
         new_status = data.get('status')
@@ -171,13 +179,20 @@ def manage_job(job_id=None):
             recruiter_id=recruiter.user_id,
             title=data.get('title'),
             description=data.get('description'),
-            skills=data.get('skills'),
-            experience=data.get('experience'),
-            salary_range=data.get('salary_range'),
+            experience_id=data.get('experience', type=int) or None,
+            salary_id=data.get('salary', type=int) or None,
             deadline=deadline,
             status='ACTIVE'
         )
         db.session.add(job)
+        db.session.flush() # Để lấy job.id
+        
+        from app.models import PostSkill
+        skills_raw = data.get('skills', '').strip()
+        if skills_raw:
+            for s_name in [s.strip() for s in skills_raw.split(',') if s.strip()]:
+                db.session.add(PostSkill(post_id=job.id, skill_name=s_name))
+
         msg = "Đăng tin mới thành công."
 
     db.session.commit()

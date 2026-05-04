@@ -193,7 +193,7 @@ def update_account_profile(user, form_data, files=None):
     user.date_of_birth = date_of_birth
 
     # --- Xử lý CV ---
-    # Lấy hoặc tạo CV cho user (giả sử mỗi user có 1 CV chính hiển thị trong profile)
+    # Lấy hoặc tạo CV cho user (giả thiết mỗi user có 1 CV chính hiển thị trong profile)
     cv = CV.query.filter_by(user_id=user.id).first()
     if not cv:
         cv = CV(user_id=user.id)
@@ -202,8 +202,15 @@ def update_account_profile(user, form_data, files=None):
     cv.title = (form_data.get("cv_title") or "").strip() or None
     cv.summary = (form_data.get("cv_summary") or "").strip() or None
     cv.education = (form_data.get("cv_education") or "").strip() or None
-    cv.skills = (form_data.get("cv_skills") or "").strip() or None
     cv.experience = (form_data.get("cv_experience") or "").strip() or None
+    
+    # Xử lý skills
+    from app.models import CVSkill
+    cv_skills_raw = (form_data.get("cv_skills") or "").strip()
+    CVSkill.query.filter_by(cv_id=cv.id).delete()
+    if cv_skills_raw:
+        for s_name in [s.strip() for s in cv_skills_raw.split(',') if s.strip()]:
+            db.session.add(CVSkill(cv_id=cv.id, skill_name=s_name))
 
     try:
         db.session.commit()
@@ -513,16 +520,24 @@ def save_resume(user, form_data):
 
         cv.title = (form_data.get("title") or "").strip() or None
         cv.summary = (form_data.get("summary") or "").strip() or None
-        cv.skills = (form_data.get("skills") or "").strip() or None
         cv.education = (form_data.get("education") or "").strip() or None
         cv.experience = (form_data.get("experience") or "").strip() or None
+        
+        # Xử lý skills
+        from app.models import CVSkill
+        skills_raw = (form_data.get("skills") or "").strip()
+        CVSkill.query.filter_by(cv_id=cv.id).delete()
+        if skills_raw:
+            for s_name in [s.strip() for s in skills_raw.split(',') if s.strip()]:
+                db.session.add(CVSkill(cv_id=cv.id, skill_name=s_name))
+
         if form_data.get("cv_url"):
             cv.cv_url = form_data.get("cv_url")
 
         cv_content = {
             "title": cv.title,
             "summary": cv.summary,
-            "skills": cv.skills,
+            "skills": skills_raw,
             "experience": cv.experience,
             "education": cv.education
         }

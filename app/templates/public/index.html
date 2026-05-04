@@ -45,22 +45,22 @@
 
             <select name="location">
                 <option value="">Tất cả địa điểm</option>
-                {% for loc in locations %}
-                <option value="{{ loc }}" {% if request.args.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
+                {% for loc in all_locations %}
+                <option value="{{ loc.id }}" {% if request.args.get('location') == loc.id|string %}selected{% endif %}>{{ loc.name }}</option>
                 {% endfor %}
             </select>
 
             <select name="experience">
                 <option value="">Kinh nghiệm</option>
-                {% for exp in experience_options %}
-                <option value="{{ exp }}" {% if request.args.get('experience') == exp %}selected{% endif %}>{{ exp }}</option>
+                {% for exp in all_experiences %}
+                <option value="{{ exp.id }}" {% if request.args.get('experience') == exp.id|string %}selected{% endif %}>{{ exp.name }}</option>
                 {% endfor %}
             </select>
 
             <select name="salary">
                 <option value="">Mức lương</option>
-                {% for sal in salary_options %}
-                <option value="{{ sal }}" {% if request.args.get('salary') == sal %}selected{% endif %}>{{ sal }}</option>
+                {% for sal in all_salaries %}
+                <option value="{{ sal.id }}" {% if request.args.get('salary') == sal.id|string %}selected{% endif %}>{{ sal.name }}</option>
                 {% endfor %}
             </select>
 
@@ -118,8 +118,8 @@
                         <h3>{{ job.title }}</h3>
                         <p class="company-name">{{ job.recruiter.company.name }}</p>
                         <div class="job-card-tags">
-                            <span>{{ job.salary_range or 'Thỏa thuận' }}</span>
-                            <span>{{ job.experience or 'Không yêu cầu kinh nghiệm' }}</span>
+                            <span>{{ job.salary_ref.name if job.salary_ref else 'Thỏa thuận' }}</span>
+                            <span>{{ job.experience_ref.name if job.experience_ref else 'Không yêu cầu kinh nghiệm' }}</span>
                         </div>
                     </div>
                 </article>

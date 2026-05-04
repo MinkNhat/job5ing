@@ -37,4 +37,15 @@ def create_app(test_config=None):
     app.register_blueprint(recruiter_bp)
     from app.main.routes import main_bp
     app.register_blueprint(main_bp)
+
+    from app.models import Location, CompanyScale, ExperienceOption, SalaryOption
+    @app.context_processor
+    def inject_global_options():
+        return {
+            'all_locations': Location.query.all(),
+            'all_scales': CompanyScale.query.all(),
+            'all_experiences': ExperienceOption.query.all(),
+            'all_salaries': SalaryOption.query.all()
+        }
+
     return app

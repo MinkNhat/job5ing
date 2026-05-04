@@ -7,33 +7,51 @@ from services.smtp_service import send_application_status_email
 def calculate_ai_score(cv_id, post_id):
     """
     Tính điểm phù hợp giữa CV và Tin tuyển dụng dựa trên từ khóa kỹ năng.
-    Trả về số nguyên từ 0-100.
+    Sử dụng CVSkill và PostSkill để lấy danh sách kỹ năng chuẩn xác.
     """
     cv = db.session.get(CV, cv_id)
     post = db.session.get(Post, post_id)
     
     if not cv or not post:
         return 0
-        
-    # Chuẩn hóa văn bản: chuyển thành chữ thường, xóa ký tự đặc biệt
+
     def normalize(text):
         if not text: return ""
-        return re.sub(r'[^\w\s,]', '', text.lower())
+        # Giữ lại các ký tự đặc biệt phổ biến trong kỹ năng công nghệ: +, #, ., /
+        return re.sub(r'[^\w\s,+#./-]', '', text.lower())
 
-    cv_text = normalize(f"{cv.skills} {cv.experience} {cv.summary}")
-    post_skills = normalize(post.skills).split(',')
-    
-    # Làm sạch danh sách kỹ năng yêu cầu
-    required_skills = [s.strip() for s in post_skills if s.strip()]
+    def get_skill_names(skills_obj):
+        if not skills_obj: return []
+        return [s.skill_name for s in skills_obj]
+
+    required_skills = get_skill_names(post.skills)
     if not required_skills:
         return 0
-        
+
+    cv_skills = get_skill_names(cv.skills)
+    cv_text = normalize(f"{' '.join(cv_skills)} {cv.experience or ''} {cv.summary or ''} {cv.cv_content or ''}")
+
     matches = 0
     for skill in required_skills:
-        # Tìm chính xác từ khóa trong CV
-        if re.search(r'\b' + re.escape(skill) + r'\b', cv_text):
-            matches += 1
+        skill_norm = skill.lower().strip()
+        if not skill_norm: continue
+        
+        # Tạo pattern tìm kiếm thông minh
+        escaped_skill = re.escape(skill_norm)
+        
+        # Boundary ở phía trước: Nếu bắt đầu bằng ký tự từ (\w), dùng \b. 
+        # Nếu bắt đầu bằng ký tự đặc biệt (như .net), không dùng \b.
+        prefix = r'\b' if re.match(r'^\w', skill_norm) else r''
+        
+        # Boundary ở phía sau: Nếu kết thúc bằng ký tự từ (\w), dùng \b.
+        # Nếu kết thúc bằng ký tự đặc biệt (như c++), không dùng \b.
+        suffix = r'\b' if re.search(r'\w$', skill_norm) else r''
+        
+        pattern = prefix + escaped_skill + suffix
             
+        if re.search(pattern, cv_text, re.IGNORECASE):
+            matches += 1
+
     score = int((matches / len(required_skills)) * 100)
     return min(score, 100)
 

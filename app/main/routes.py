@@ -47,38 +47,28 @@ def index():
     query = Post.query.filter(Post.status.in_(["ACTIVE", "PINNED"])).join(Recruiter).join(Company)
 
     if keyword:
-        query = query.filter(
-            (Post.title.ilike(f"%{keyword}%")) | (Company.name.ilike(f"%{keyword}%"))
+        from app.models import PostSkill
+        query = query.join(PostSkill, isouter=True).filter(
+            (Post.title.ilike(f"%{keyword}%")) | 
+            (Post.description.ilike(f"%{keyword}%")) |
+            (PostSkill.skill_name.ilike(f"%{keyword}%")) |
+            (Company.name.ilike(f"%{keyword}%"))
         )
 
     if location:
-        if location.lower() in ["tp. hồ chí minh", "hồ chí minh", "hcm"]:
-            query = query.filter(Company.location.ilike("%HCM%") | Company.location.ilike("%Hồ Chí Minh%"))
-        else:
-            query = query.filter(Company.location.ilike(f"%{location}%"))
+        query = query.filter(Company.city_id == location)
 
     if experience:
-        query = query.filter(Post.experience == experience)
+        query = query.filter(Post.experience_id == experience)
 
     if salary:
-        query = query.filter(Post.salary_range == salary)
-
-    # Define ranking for Salary and Experience based on constants
-    salary_rank = case(
-        {val: i for i, val in enumerate(SALARY_OPTIONS)},
-        value=Post.salary_range
-    )
-    
-    exp_rank = case(
-        {val: i for i, val in enumerate(EXPERIENCE_OPTIONS)},
-        value=Post.experience
-    )
+        query = query.filter(Post.salary_id == salary)
 
     # Sorting logic
     if sort_by == "salary_desc":
-        query = query.order_by(salary_rank.desc(), Post.created_at.desc())
+        query = query.order_by(Post.salary_id.desc(), Post.created_at.desc())
     elif sort_by == "experience_desc":
-        query = query.order_by(exp_rank.desc(), Post.created_at.desc())
+        query = query.order_by(Post.experience_id.desc(), Post.created_at.desc())
     elif sort_by == "newest":
         query = query.order_by(Post.created_at.desc())
     else: # Default relevance (PINNED first, then newest)
@@ -91,10 +81,7 @@ def index():
 
     return render_template(
         "public/index.html",
-        pagination=pagination,
-        locations=HOME_LOCATIONS,
-        experience_options=EXPERIENCE_OPTIONS,
-        salary_options=SALARY_OPTIONS,
+        pagination=pagination
     )
 
 @main_bp.route("/register", methods=["GET", "POST"])
@@ -401,12 +388,11 @@ def google_callback():
         
         success, message = login_with_google_profile(profile)
 
-        if success and target_is_employer:
+        if success:
             user = User.query.filter_by(email=profile.get("email").lower()).first()
             if target_is_employer and user:
                 user.is_employer = True
                 db.session.commit()
-                # Cập nhật lại session role
                 session["user_role"] = "employer"
                 flash("Đăng ký tài khoản nhà tuyển dụng qua Google thành công.", "success")
                 return redirect(url_for("main.recruiter_request"))
@@ -508,7 +494,9 @@ def run_ai_screening(post_id):
 
     post = Post.query.get_or_404(post_id)
     for app in post.applications:
-        app.ai_score = calculate_ai_score(app.cv_id, post_id)
+        score, analysis = calculate_ai_score(app.cv_id, post_id)
+        app.ai_score = score
+        app.ai_analysis = analysis
 
     db.session.commit()
     flash("Đã hoàn tất sàng lọc hồ sơ bằng AI.", "success")
@@ -523,6 +511,29 @@ def change_app_status():
     else:
         flash("Lỗi khi cập nhật trạng thái.", "danger")
     return redirect(request.referrer)
+
+@main_bp.route("/talent/view-cv/<int:user_id>")
+def view_cv_talent(user_id):
+    user = require_logged_in_user()
+    if not user or not user.is_employer:
+        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
+        return redirect(url_for("main.login"))
+
+    target_user = db.session.get(User, user_id)
+    if not target_user or target_user.is_employer or not target_user.is_open_to_work:
+        flash("Không tìm thấy ứng viên hoặc ứng viên không ở chế độ tìm việc.", "warning")
+        return redirect(url_for("main.index"))
+
+    # Lấy CV mặc định
+    cv = CV.query.filter_by(user_id=user_id, is_default=True).first()
+    if not cv:
+        cv = CV.query.filter_by(user_id=user_id).first()
+    
+    if not cv:
+        flash("Ứng viên chưa cập nhật hồ sơ CV.", "info")
+        return redirect(request.referrer or url_for("main.index"))
+
+    return render_template("public/view_cv.html", cv=cv, target_user=target_user)
 
 @main_bp.route("/manage-candidates/view-cv/<int:application_id>")
 def view_candidate_cv(application_id):

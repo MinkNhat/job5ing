@@ -104,7 +104,7 @@
                 <li class="page-item {% if not companies.has_prev %}disabled{% endif %}">
                     <a
                         class="page-link"
-                        href="{{ url_for('admin_panel.companies', page=companies.prev_num, **request.args) if companies.has_prev else '#' }}"
+                        href="{{ url_for('admin_panel.companies', page=companies.prev_num, keyword=request.args.get('keyword'), status=request.args.get('status', 'all')) if companies.has_prev else '#' }}"
                     >
                         Trước
                     </a>
@@ -114,7 +114,7 @@
                         <li class="page-item {% if page_num == companies.page %}active{% endif %}">
                             <a
                                 class="page-link"
-                                href="{{ url_for('admin_panel.companies', page=page_num, **request.args) }}"
+                                href="{{ url_for('admin_panel.companies', page=page_num, keyword=request.args.get('keyword'), status=request.args.get('status', 'all')) }}"
                             >
                                 {{ page_num }}
                             </a>
@@ -128,7 +128,7 @@
                 <li class="page-item {% if not companies.has_next %}disabled{% endif %}">
                     <a
                         class="page-link"
-                        href="{{ url_for('admin_panel.companies', page=companies.next_num, **request.args) if companies.has_next else '#' }}"
+                        href="{{ url_for('admin_panel.companies', page=companies.next_num, keyword=request.args.get('keyword'), status=request.args.get('status', 'all')) if companies.has_next else '#' }}"
                     >
                         Sau
                     </a>
