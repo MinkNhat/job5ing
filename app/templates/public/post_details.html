@@ -201,7 +201,14 @@
                     <div class="jd-section">
                         <h3>Yêu cầu kỹ năng</h3>
                         <div class="jd-content">
-                            {{ post.skills | replace('\n', '<br>') | safe }}
+                            <div class="skill-badges">
+                                {% set skills_list = post.skills.replace('\n', ',').split(',') %}
+                                {% for skill in skills_list %}
+                                    {% if skill.strip() %}
+                                        <span class="skill-badge">{{ skill.strip() }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
                     {% endif %}

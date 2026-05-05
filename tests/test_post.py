@@ -116,7 +116,9 @@ class PostTestCase(unittest.TestCase):
         self.assertIn("Job5ing Corp", data)
         self.assertIn("Thỏa thuận", data)
         self.assertIn("Không yêu cầu", data)
-        self.assertIn("Python, Flask, SQLAlchemy", data)
+        self.assertIn("Python", data)
+        self.assertIn("Flask", data)
+        self.assertIn("SQLAlchemy", data)
         self.assertIn("Hồ Chí Minh", data)
 
     def test_post_details_404(self):

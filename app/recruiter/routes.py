@@ -1,6 +1,6 @@
 from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from app.models import (
-    User, Post, Recruiter, Application, Company, db, 
+    User, Post, PostSkill, Recruiter, Application, Company, db, 
     ExperienceOption, SalaryOption, CompanyScale, Location
 )
 from app.main.services import require_logged_in_user
@@ -104,7 +104,7 @@ def get_job(job_id):
             "id": job.id,
             "title": job.title,
             "description": job.description,
-            "skills": job.skills,
+            "skills": ", ".join([s.skill_name for s in job.skills]),
             "experience_id": job.experience_id,
             "salary_id": job.salary_id,
             "deadline": job.deadline.isoformat() if job.deadline else None,
@@ -129,7 +129,10 @@ def manage_job(job_id=None):
             return redirect(url_for('recruiter.dashboard'))
         job.title = data.get('title')
         job.description = data.get('description')
+        
+        # Handle skills relationship
         job.skills = data.get('skills')
+
         job.experience_id = data.get('experience', type=int)
         job.salary_id = data.get('salary', type=int)
         job.deadline = deadline
@@ -142,13 +145,17 @@ def manage_job(job_id=None):
             recruiter_id=recruiter.user_id,
             title=data.get('title'),
             description=data.get('description'),
-            skills=data.get('skills'),
             experience_id=data.get('experience', type=int),
             salary_id=data.get('salary', type=int),
             deadline=deadline,
             status='ACTIVE'
         )
         db.session.add(job)
+        db.session.flush() # Get job.id for update_skills
+
+        # Handle skills relationship
+        job.skills = data.get('skills')
+
         msg = "Đăng tin mới thành công."
     db.session.commit()
     flash(msg, "success")

@@ -85,7 +85,7 @@ def register():
 def switch_mode(mode):
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     args = request.args.to_dict()
     if mode == "company":
         if not user.is_employer:
@@ -124,7 +124,7 @@ def recruiter_request():
 def submit_join_request():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     company_id = request.form.get("company_id")
     position = request.form.get("position")
     if not company_id or not position:
@@ -152,7 +152,7 @@ def submit_join_request():
 def register_company():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     existing_recruiter = Recruiter.query.get(user.id)
     if existing_recruiter:
         try:
@@ -236,41 +236,37 @@ def register_company():
         return redirect(url_for("main.recruiter_request"))
 @main_bp.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "GET" and request.args.get("next"):
+    next_url = request.args.get("next") or request.form.get("next")
+    if request.method == "GET" and next_url:
         flash("Bạn cần đăng nhập để tiếp tục chức năng này.", "warning")
     if request.method == "POST":
         success, message = login_with_password(request.form)
-        flash(message, "success" if success else "danger")
         if success:
-            return redirect(url_for("main.index"))
+            flash(message, "success")
+            return redirect(next_url or url_for("main.index"))
         flash(message, "danger")
     return render_template(
         "auth/login.html",
+        next_url=next_url,
         google_login_ready=bool(
             current_app.config.get("GOOGLE_CLIENT_ID")
             and current_app.config.get("GOOGLE_CLIENT_SECRET")
         ),
     )
-@main_bp.route("/account", methods=["GET", "POST"])
-def account():
-    user = require_logged_in_user()
-    if not user:
-        return redirect(url_for("main.login"))
-    if request.method == "POST":
-        success, message = update_account_profile(user, request.form, request.files)
-        flash(message, "success" if success else "danger")
-        return redirect(url_for("main.account"))
-    return render_template("public/account.html", user=user)
+
 @main_bp.route("/login/google")
 def google_login():
     if not current_app.config.get("GOOGLE_CLIENT_ID") or not current_app.config.get("GOOGLE_CLIENT_SECRET"):
         flash("Google đăng nhập chưa được cấu hình. Hãy thêm GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET.", "warning")
         return redirect(url_for("main.login"))
+    
+    next_url = request.args.get("next")
     if request.args.get("is_employer") == "true":
         session["google_is_employer"] = True
     else:
         session.pop("google_is_employer", None)
-    state = build_google_state_token()
+    
+    state = build_google_state_token(next_url=next_url)
     query = {
         "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
         "redirect_uri": build_google_redirect_uri(),
@@ -280,31 +276,38 @@ def google_login():
         "prompt": "select_account",
     }
     return redirect(f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(query)}")
+
 @main_bp.route("/login/google/callback")
 def google_callback():
     returned_state = request.args.get("state")
     if not returned_state:
         flash("Không nhận được thông tin xác thực Google. Vui lòng thử lại.", "danger")
         return redirect(url_for("main.login"))
+    
     try:
-        validate_google_state_token(returned_state)
+        state_payload = validate_google_state_token(returned_state)
+        next_url = state_payload.get("next")
     except (BadSignature, BadTimeSignature):
         flash("Phiên đăng nhập Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.", "danger")
         return redirect(url_for("main.login"))
+    
     error = request.args.get("error")
     if error:
         flash(f"Google đăng nhập bị từ chối: {error}.", "danger")
         return redirect(url_for("main.login"))
+    
     code = request.args.get("code")
     if not code:
         flash("Không nhận được mã xác thực từ Google.", "danger")
         return redirect(url_for("main.login"))
+    
     try:
         token_data = fetch_google_tokens(code)
         profile = fetch_google_userinfo(token_data["access_token"])
         target_is_employer = session.pop("google_is_employer", False)
         success, message = login_with_google_profile(profile)
-        if success and target_is_employer:
+        
+        if success:
             user = User.query.filter_by(email=profile.get("email").lower()).first()
             if target_is_employer and user:
                 user.is_employer = True
@@ -312,17 +315,34 @@ def google_callback():
                 session["user_role"] = "employer"
                 flash("Đăng ký tài khoản nhà tuyển dụng qua Google thành công.", "success")
                 return redirect(url_for("main.recruiter_request"))
+            
             flash(message, "success")
             if user and user.is_admin:
-                return redirect(url_for("admin_panel.index"))
-            return redirect(url_for("main.index"))
+                return redirect(next_url or url_for("admin_panel.index"))
+            return redirect(next_url or url_for("main.index"))
+        
         flash(message, "danger")
-        return redirect(url_for("main.login"))
-    except (HTTPError, URLError, KeyError, SQLAlchemyError, json.JSONDecodeError):
-        from app import db
+        return redirect(url_for("main.login", next=next_url))
+    except Exception as e:
+        print(f"GOOGLE LOGIN ERROR: {str(e)}")
         db.session.rollback()
-        flash("Không thể hoàn tất đăng nhập Google lúc này. Vui lòng kiểm tra lại cấu hình và thử lại.", "danger")
-        return redirect(url_for("main.login"))
+        flash(f"Không thể hoàn tất đăng nhập Google lúc này: {str(e)}", "danger")
+        return redirect(url_for("main.login", next=next_url))
+
+@main_bp.route("/account", methods=["GET", "POST"])
+def account():
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login", next=request.url))
+    
+    if request.method == "POST":
+        success, message = update_account_profile(user, request.form, request.files)
+        flash(message, "success" if success else "danger")
+        if success:
+            return redirect(url_for("main.account"))
+            
+    return render_template("public/account.html", user=user)
+
 @main_bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()
@@ -412,7 +432,7 @@ def view_candidate_cv(application_id):
 def report_post(post_id):
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     reason = request.form.get("reason")
     description = request.form.get("description", "").strip()
     if not reason:
@@ -446,7 +466,7 @@ def preview_resume_endpoint():
 def resume():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     cv_id = request.args.get("cv_id", type=int)
     action = request.args.get("action")
     if request.method == "POST":
@@ -499,7 +519,7 @@ def post_details(post_id):
 def apply_job(post_id):
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     if user.is_employer:
         flash("Nhà tuyển dụng không thể ứng tuyển.", "warning")
         return redirect(url_for("main.post_details", post_id=post_id))
@@ -558,7 +578,7 @@ def apply_job(post_id):
 def applied_jobs():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     cv = CV.query.filter_by(user_id=user.id).first()
     q = request.args.get('q', '').strip()
     status_filter = request.args.get('status', '').upper()
@@ -574,7 +594,7 @@ def applied_jobs():
 def resume_management():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.login", next=request.url))
     q = request.args.get('q', '').strip()
     page = request.args.get("page", 1, type=int)
     query = CV.query.filter_by(user_id=user.id)

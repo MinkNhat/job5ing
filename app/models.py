@@ -91,7 +91,19 @@ class CV(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())
     last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
     applications = db.relationship('Application', backref='cv', lazy=True)
-    skills = db.relationship('CVSkill', backref='cv', lazy=True, cascade="all, delete-orphan")
+    skills_list = db.relationship('CVSkill', backref='cv', lazy=True, cascade="all, delete-orphan")
+
+    @property
+    def skills(self):
+        return ", ".join([s.skill_name for s in self.skills_list])
+
+    @skills.setter
+    def skills(self, value):
+        self.skills_list = []
+        if value:
+            names = [s.strip() for s in value.split(',') if s.strip()]
+            for name in names:
+                self.skills_list.append(CVSkill(skill_name=name))
 
 class CVSkill(db.Model):
     __tablename__ = 'cv_skill'
@@ -121,7 +133,19 @@ class Post(db.Model):
     last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
     applications = db.relationship('Application', backref='post', lazy=True)
     reports = db.relationship('PostReport', backref='post', lazy=True, cascade="all, delete-orphan")
-    skills = db.relationship('PostSkill', backref='post', lazy=True, cascade="all, delete-orphan")
+    skills_list = db.relationship('PostSkill', backref='post', lazy=True, cascade="all, delete-orphan")
+
+    @property
+    def skills(self):
+        return ", ".join([s.skill_name for s in self.skills_list])
+
+    @skills.setter
+    def skills(self, value):
+        self.skills_list = []
+        if value:
+            names = [s.strip() for s in value.split(',') if s.strip()]
+            for name in names:
+                self.skills_list.append(PostSkill(skill_name=name))
 
 class PostSkill(db.Model):
     __tablename__ = 'post_skill'

@@ -1,7 +1,7 @@
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
-from app.models import User, Company, Post, Application, Notification, PostReport
+from app.models import User, Company, Post, PostSkill, Application, Notification, PostReport
 from services.smtp_service import send_approval_email
 def get_dashboard_stats(admin_id):
     total_users = User.query.count()
@@ -174,7 +174,7 @@ def get_posts(page=1, keyword=None, status=None, is_reported=None):
             or_(
                 Post.title.ilike(keyword_filter),
                 Post.description.ilike(keyword_filter),
-                Post.skills.ilike(keyword_filter)
+                Post.skills_list.any(PostSkill.skill_name.ilike(keyword_filter))
             )
         )
     if status and status != "all":

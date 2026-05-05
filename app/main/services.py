@@ -15,8 +15,7 @@ import google.generativeai as genai
 import fitz
 from docx import Document
 from app import db
-from app.models import User, CV
-from app.models import User, CV, Post, PostReport, Recruiter
+from app.models import User, CV, CVSkill, Post, PostSkill, PostReport, Recruiter
 def submit_post_report(user, post_id, reason, description):
     post = db.session.get(Post, post_id)
     if not post:
@@ -99,6 +98,7 @@ def sync_authenticated_session(user):
     session["user_name"] = get_display_name(user)
     session["user_role"] = "employer" if user.is_employer else "candidate"
     session.permanent = True
+
 def parse_date_input(raw_value):
     raw_value = (raw_value or "").strip()
     if not raw_value:
@@ -152,7 +152,10 @@ def update_account_profile(user, form_data, files=None):
     cv.title = (form_data.get("cv_title") or "").strip() or None
     cv.summary = (form_data.get("cv_summary") or "").strip() or None
     cv.education = (form_data.get("cv_education") or "").strip() or None
-    cv.skills = (form_data.get("cv_skills") or "").strip() or None
+    
+    # Handle skills relationship
+    cv.skills = (form_data.get("cv_skills") or "").strip()
+
     cv.experience = (form_data.get("cv_experience") or "").strip() or None
     try:
         db.session.commit()
@@ -234,13 +237,15 @@ def build_google_redirect_uri():
     if configured_uri:
         return configured_uri
     return url_for("main.google_callback", _external=True)
-def build_google_state_token():
+def build_google_state_token(next_url=None):
     serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     payload = {
         "nonce": secrets.token_urlsafe(16),
         "issued_at": int(datetime.utcnow().timestamp()),
+        "next": next_url
     }
     return serializer.dumps(payload, salt="google-oauth-state")
+
 def validate_google_state_token(state):
     serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     return serializer.loads(state, salt="google-oauth-state", max_age=600)
@@ -392,13 +397,21 @@ def save_resume(user, form_data):
             cv = CV.query.filter_by(user_id=user.id).first()
         if not cv:
             cv = CV(user_id=user.id)
+            db.session.add(cv)
+            db.session.flush()
+
         cv.title = (form_data.get("title") or "").strip() or None
         cv.summary = (form_data.get("summary") or "").strip() or None
-        cv.skills = (form_data.get("skills") or "").strip() or None
+        
+        # Handle skills relationship
+        cv.skills = (form_data.get("skills") or "").strip()
+
         cv.education = (form_data.get("education") or "").strip() or None
         cv.experience = (form_data.get("experience") or "").strip() or None
         if form_data.get("cv_url"):
             cv.cv_url = form_data.get("cv_url")
+        
+        # Get skill names as string for cv_content
         cv_content = {
             "title": cv.title,
             "summary": cv.summary,

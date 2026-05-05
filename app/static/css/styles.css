@@ -1235,3 +1235,29 @@ input.form-control {
     .site-nav { flex-wrap: wrap; }
     .site-nav-link { text-align: center; }
 }
+
+/* Skill Badges */
+.skill-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.skill-badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border: 1px solid #dce2ee;
+    border-radius: 6px;
+    background-color: transparent;
+    color: #4a5568;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.skill-badge:hover {
+    border-color: #00b14f;
+    color: #00b14f;
+    background-color: rgba(0, 177, 79, 0.05);
+}
