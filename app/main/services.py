@@ -151,7 +151,7 @@ def update_account_profile(user, form_data, files=None):
         return False, error_message
 
     phone = (form_data.get("phone") or "").strip()
-    avatar_url = (form_data.get("avatar_url") or "").strip()
+    avatar_url = None
 
     if phone:
         is_valid, error_message = validate_phone(phone)
@@ -181,21 +181,11 @@ def update_account_profile(user, form_data, files=None):
     user.phone = phone or None
     user.address = (form_data.get("address") or "").strip() or None
     user.sex = (form_data.get("sex") or "").strip() or None
-    user.avatar_url = avatar_url or None
+
+    if avatar_url:
+        user.avatar_url = avatar_url
     user.date_of_birth = date_of_birth
-    cv = CV.query.filter_by(user_id=user.id).first()
-    if not cv:
-        cv = CV(user_id=user.id)
-        db.session.add(cv)
 
-    cv.title = (form_data.get("cv_title") or "").strip() or None
-    cv.summary = (form_data.get("cv_summary") or "").strip() or None
-    cv.education = (form_data.get("cv_education") or "").strip() or None
-
-    # Handle skills relationship
-    cv.skills = (form_data.get("cv_skills") or "").strip()
-
-    cv.experience = (form_data.get("cv_experience") or "").strip() or None
     try:
         db.session.commit()
         sync_authenticated_session(user)
@@ -480,6 +470,8 @@ def save_resume(user, form_data):
         
         if action == "create":
             cv = CV(user_id=user.id)
+            db.session.add(cv)
+            db.session.flush()
         elif cv_id:
             cv = CV.query.filter_by(id=cv_id, user_id=user.id).first()
         else:
@@ -492,20 +484,24 @@ def save_resume(user, form_data):
 
         cv.title = (form_data.get("title") or "").strip() or None
         cv.summary = (form_data.get("summary") or "").strip() or None
-
-        # Handle skills relationship
-        cv.skills = (form_data.get("skills") or "").strip()
-
         cv.education = (form_data.get("education") or "").strip() or None
         cv.experience = (form_data.get("experience") or "").strip() or None
         if form_data.get("cv_url"):
             cv.cv_url = form_data.get("cv_url")
 
-        # Get skill names as string for cv_content
+        cv_skills_str = (form_data.get("skills") or "").strip()
+        db.session.flush()
+
+        skills_list = []
+        if cv_skills_str:
+            for skill_name in [s.strip() for s in cv_skills_str.split(',') if s.strip()]:
+                db.session.add(CVSkill(cv_id=cv.id, skill_name=skill_name))
+                skills_list.append(skill_name)
+
         cv_content = {
             "title": cv.title,
             "summary": cv.summary,
-            "skills": cv.skills,
+            "skills": ", ".join(skills_list),
             "experience": cv.experience,
             "education": cv.education
         }

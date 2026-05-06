@@ -1,126 +1,81 @@
-.container {
-    max-width: 1200px;
-}
-
-.content-card {
-    background: #fff;
-    border-radius: 6px;
-    padding: 25px;
-    margin-top: 30px;
-    border: 1px solid #dee2e6;
-}
-
-.profile-summary-card {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
+.form-select {
+    border: 2px solid rgba(28, 48, 78, 0.14);
     border-radius: 10px;
-    padding: 24px;
-    text-align: center;
+    padding: 12px 16px;
 }
 
-.profile-avatar {
-    width: 88px;
-    height: 88px;
-    margin: 0 auto 16px;
-    border-radius: 50%;
-    background: #212529;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 600;
+.account-nav {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
     overflow: hidden;
 }
 
-.profile-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.nav-item {
+    border-bottom: 1px solid #dee2e6;
 }
 
-.profile-meta {
-    border-top: 1px solid #e4e8ee;
-    padding-top: 16px;
+.nav-item:last-child {
+    border-bottom: none;
 }
 
-.profile-meta-row {
+.nav-link {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 8px 0;
-    font-size: 0.92rem;
+    padding: 12px 16px;
+    color: #212529;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
 }
 
-.profile-meta-label {
-    color: #6c757d;
+.nav-link:hover {
+    background-color: #f8f9fa;
+    color: var(--site-primary, #ff6b35);
 }
 
-.form-label {
-    font-size: 0.8rem;
-    color: #6c757d;
-    font-weight: 500;
-    margin-bottom: 8px;
+.nav-link i {
+    margin-right: 8px;
+    font-size: 1.2rem;
 }
 
-.form-control,
-.form-select {
-    border: 1px solid #dee2e6;
-    font-size: 0.9rem;
-    padding: 10px 12px;
-    border-radius: 4px;
+.create-cv-section {
+    padding: 20px 0;
 }
 
-.form-control:focus,
-.form-select:focus {
-    border-color: #212529;
-    box-shadow: 0 0 0 3px rgba(33, 37, 41, 0.1);
+.create-cv-card {
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.form-control:disabled {
-    background-color: #e9ecef;
-    color: #6c757d;
+.create-cv-image {
+    margin-right: -12px;
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
 }
 
-.badge-role-blue {
-    background: #0d6efd;
+.btn-create-cv {
+    background: var(--site-primary, #ff9550);
     color: #fff;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 4px;
-}
-
-.badge-status-active {
-    background: #198754;
-    color: #fff;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 4px;
-}
-
-.badge-status-inactive {
-    background: #dc3545;
-    color: #fff;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 4px;
-}
-
-.btn-filter {
-    background: var(--site-primary);
-    color: #fff;
-    font-size: 0.9rem;
     border: none;
-    padding: 10px 24px;
-    border-radius: 4px;
-    font-weight: 500;
-    transition: all 0.2s;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
 }
 
-.btn-filter:hover {
-    background: var(--site-primary-deep);
+.btn-create-cv:hover {
+    background: var(--site-primary-deep, #ff8740);
     color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 149, 80, 0.2);
 }
 
 @media (max-width: 992px) {
@@ -132,9 +87,5 @@
 @media (max-width: 576px) {
     .content-card {
         padding: 16px 12px;
-    }
-
-    .btn-filter {
-        width: 100%;
     }
 }
