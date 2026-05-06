@@ -2,17 +2,22 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
 from flask_migrate import Migrate
+
 db = SQLAlchemy()
 migrate = Migrate()
+
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
+
     db.init_app(app)
     migrate.init_app(app, db)
+
     from flask import session
     from app.models import User
+
     @app.context_processor
     def inject_user_context():
         from app.models import User, Recruiter
@@ -25,6 +30,7 @@ def create_app(test_config=None):
             "current_recruiter": recruiter,
             "view_mode": view_mode
         }
+
     from app.admin.routes import admin_bp
     app.register_blueprint(admin_bp)
     from app.recruiter import recruiter_bp

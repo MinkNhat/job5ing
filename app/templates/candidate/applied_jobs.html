@@ -55,7 +55,7 @@
                             <tr>
                                 <td>
                                     <div class="fw-bold text-dark">{{ app.post.title }}</div>
-                                    <small class="text-muted">{{ app.post.experience }}</small>
+                                    <small class="text-muted">{{ app.post.experience_ref.name if app.post.experience_ref else 'Kinh nghiệm: -' }}</small>
                                 </td>
                                 <td>{{ app.post.recruiter.company.name }}</td>
                                 <td>{{ app.applied_at.strftime('%d/%m/%Y') }}</td>

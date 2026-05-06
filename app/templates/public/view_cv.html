@@ -150,10 +150,12 @@
 
                 <div class="mb-4">
                     <h5 class="section-title"><i class="fas fa-tools text-primary"></i> Kỹ năng chuyên môn</h5>
-                    <div>
+                    <div class="skill-badges">
                         {% if application.cv.skills %}
                             {% for skill in application.cv.skills.split(',') %}
-                                <span class="skill-tag">{{ skill.strip() }}</span>
+                                {% if skill.strip() %}
+                                    <span class="skill-badge">{{ skill.strip() }}</span>
+                                {% endif %}
                             {% endfor %}
                         {% else %}
                             <span class="text-muted">Chưa cập nhật kỹ năng.</span>

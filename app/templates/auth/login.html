@@ -20,6 +20,9 @@
                 <h2 class="auth-centered-title">ĐĂNG NHẬP</h2>
 
                 <form method="post" class="auth-centered-form">
+                    {% if next_url %}
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    {% endif %}
                     <label>
                         Tên đăng nhập
                         <input type="email" name="email" value="{{ request.form.get('email', '') }}" placeholder="Nhập tên đăng nhập" required>
@@ -45,7 +48,7 @@
 
                 <div class="auth-centered-divider"><span>HOẶC</span></div>
 
-                <a href="{{ url_for('main.google_login') }}" class="auth-centered-google {% if not google_login_ready %}disabled{% endif %}">
+                <a href="{{ url_for('main.google_login', next=next_url) }}" class="auth-centered-google {% if not google_login_ready %}disabled{% endif %}">
                     <span class="auth-centered-google-mark">G</span>
                     <span>Tiếp tục với Google</span>
                 </a>
