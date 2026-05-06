@@ -2,7 +2,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.models import User, Company, Post, Application, Notification, PostReport
+from app.models import User, Company, Post, PostSkill, Application, Notification, PostReport
 from services.smtp_service import send_approval_email
 
 def get_dashboard_stats(admin_id):
@@ -13,8 +13,6 @@ def get_dashboard_stats(admin_id):
 
     active_posts = Post.query.filter_by(status='ACTIVE').count()
     pending_companies = Company.query.filter_by(is_approved=False).count()
-    
-    # Lấy danh sách thông báo thực tế từ DB
     notifications = Notification.query.filter_by(user_id=admin_id)\
         .order_by(Notification.created_at.desc()).all()
 
@@ -114,7 +112,7 @@ def update_user(user, form_data):
         return False, "Email này đã tồn tại."
 
     user.email = email
-    if password:  # Nếu có nhập mật khẩu mới thì mới băm và cập nhật
+    if password:
         user.set_password(password)
         
     user.first_name = first_name
@@ -153,7 +151,6 @@ def update_admin_profile(user, form_data, files=None):
     if existing_user:
         return False, "Email này đã tồn tại."
 
-    # Handle avatar upload via Cloudinary
     if files and "avatar" in files:
         avatar_file = files["avatar"]
         if avatar_file and avatar_file.filename:
@@ -213,12 +210,11 @@ def get_posts(page=1, keyword=None, status=None, is_reported=None):
 
     if keyword:
         keyword_filter = f"%{keyword}%"
-        from app.models import PostSkill
-        query = query.join(PostSkill, isouter=True).filter(
+        query = query.filter(
             or_(
                 Post.title.ilike(keyword_filter),
                 Post.description.ilike(keyword_filter),
-                PostSkill.skill_name.ilike(keyword_filter)
+                Post.skills_list.any(PostSkill.skill_name.ilike(keyword_filter))
             )
         )
 
@@ -288,8 +284,6 @@ def approve_company(company):
         return False, "Công ty này đã được duyệt trước đó."
 
     company.is_approved = True
-    
-    # Tạo thông báo cho các recruiter của công ty
     for recruiter in company.recruiters:
         notification = Notification(
             user_id=recruiter.user_id,
@@ -297,8 +291,6 @@ def approve_company(company):
             type='ACCOUNT_APPROVED'
         )
         db.session.add(notification)
-        
-        # Gửi email thông báo
         if recruiter.user and recruiter.user.email:
             send_approval_email(recruiter.user.email, company.name)
 

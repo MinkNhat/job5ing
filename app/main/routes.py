@@ -1,13 +1,10 @@
 import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for, jsonify
 from itsdangerous import BadSignature, BadTimeSignature
 from sqlalchemy.exc import SQLAlchemyError
-
 from sqlalchemy import case
-from .constants import HOME_LOCATIONS, COMPANY_SCALE_OPTIONS, EXPERIENCE_OPTIONS, SALARY_OPTIONS
 from .services import (
     build_google_redirect_uri,
     build_google_state_token,
@@ -26,9 +23,12 @@ from .services import (
     validate_tax_code,
     submit_post_report,
 )
-from app.models import Company, Post, Recruiter, User, Application, Notification, CV, ApplicationStatusHistory
-from app import db
+from app.models import (
+    Company, Post, Recruiter, User, Application, Notification, CV,
+    ApplicationStatusHistory, Location, CompanyScale, ExperienceOption, SalaryOption
+)
 
+from app import db
 main_bp = Blueprint("main", __name__)
 
 @main_bp.app_context_processor
@@ -39,49 +39,47 @@ def provide_public_context():
 def index():
     page = request.args.get("page", 1, type=int)
     keyword = request.args.get("keyword", "").strip()
-    location = request.args.get("location", "").strip()
-    experience = request.args.get("experience", "").strip()
-    salary = request.args.get("salary", "").strip()
+    location_id = request.args.get("location", type=int)
+    experience_id = request.args.get("experience", type=int)
+    salary_id = request.args.get("salary", type=int)
     sort_by = request.args.get("sort_by", "relevance")
 
     query = Post.query.filter(Post.status.in_(["ACTIVE", "PINNED"])).join(Recruiter).join(Company)
 
     if keyword:
-        from app.models import PostSkill
-        query = query.join(PostSkill, isouter=True).filter(
-            (Post.title.ilike(f"%{keyword}%")) | 
-            (Post.description.ilike(f"%{keyword}%")) |
-            (PostSkill.skill_name.ilike(f"%{keyword}%")) |
-            (Company.name.ilike(f"%{keyword}%"))
+        query = query.filter(
+            (Post.title.ilike(f"%{keyword}%")) | (Company.name.ilike(f"%{keyword}%"))
         )
-
-    if location:
-        query = query.filter(Company.city_id == location)
-
-    if experience:
-        query = query.filter(Post.experience_id == experience)
-
-    if salary:
-        query = query.filter(Post.salary_id == salary)
-
-    # Sorting logic
+    if location_id:
+        query = query.filter(Company.city_id == location_id)
+    if experience_id:
+        query = query.filter(Post.experience_id == experience_id)
+    if salary_id:
+        query = query.filter(Post.salary_id == salary_id)
     if sort_by == "salary_desc":
         query = query.order_by(Post.salary_id.desc(), Post.created_at.desc())
     elif sort_by == "experience_desc":
         query = query.order_by(Post.experience_id.desc(), Post.created_at.desc())
     elif sort_by == "newest":
         query = query.order_by(Post.created_at.desc())
-    else: # Default relevance (PINNED first, then newest)
+    else:
         query = query.order_by(
-            Post.status.desc(), # 'PINNED' > 'ACTIVE'
+            Post.status.desc(),
             Post.created_at.desc()
         )
+
+    # Fetch pinned posts for the VIP section (limit to 4)
+    pinned_posts = Post.query.filter_by(status='PINNED').order_by(Post.created_at.desc()).limit(4).all()
 
     pagination = query.paginate(page=page, per_page=9, error_out=False)
 
     return render_template(
         "public/index.html",
-        pagination=pagination
+        pagination=pagination,
+        pinned_posts=pinned_posts,
+        all_locations=Location.query.all(),
+        all_experiences=ExperienceOption.query.all(),
+        all_salaries=SalaryOption.query.all(),
     )
 
 @main_bp.route("/register", methods=["GET", "POST"])
@@ -102,9 +100,7 @@ def register():
 def switch_mode(mode):
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-    
-    # Lấy các tham số query hiện có
+        return redirect(url_for("main.login", next=request.url))
     args = request.args.to_dict()
 
     if mode == "company":
@@ -149,16 +145,12 @@ def recruiter_request():
 
     companies = Company.query.all()
     return render_template("auth/recruiter_request.html",
-                           companies=companies,
-                           scale_options=COMPANY_SCALE_OPTIONS,
-                           locations=HOME_LOCATIONS)
-
+                           companies=companies)
 @main_bp.route("/submit-join-request", methods=["POST"])
 def submit_join_request():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-    
+        return redirect(url_for("main.login", next=request.url))
     company_id = request.form.get("company_id")
     position = request.form.get("position")
     
@@ -177,7 +169,7 @@ def submit_join_request():
     
     try:
         db.session.add(recruiter)
-        user.is_employer = True # Đảm bảo user có flag employer
+        user.is_employer = True
         db.session.commit()
         session["user_role"] = "employer"
         flash("Yêu cầu của bạn đã được gửi đi, vui lòng chờ admin của công ty phê duyệt.", "success")
@@ -191,13 +183,9 @@ def submit_join_request():
 def register_company():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-    
-    # Nếu user đã là recruiter của một công ty khác thì không cho tạo công ty mới
+        return redirect(url_for("main.login", next=request.url))
     existing_recruiter = Recruiter.query.get(user.id)
     if existing_recruiter:
-        # Nếu đã có recruiter rồi thì có thể là họ đang muốn "đổi thông tin yêu cầu"
-        # Xóa yêu cũ cũ để tạo mới
         try:
             db.session.delete(existing_recruiter)
             db.session.commit()
@@ -208,39 +196,32 @@ def register_company():
 
     name = request.form.get("name")
     tax_code = request.form.get("taxCode")
-    city = request.form.get("city")
+    city_id = request.form.get("city")
     address = request.form.get("address")
     website = request.form.get("website")
     establish_date_str = request.form.get("establishDate")
-    scale = request.form.get("scale")
+    scale_id = request.form.get("scale")
     position = request.form.get("position")
     
     if not name or not tax_code:
         flash("Vui lòng điền tên công ty và mã số thuế.", "danger")
         return redirect(url_for("main.recruiter_request"))
-
-    # Validate Tax Code format theo quy định Việt Nam (Modulo 11)
     is_valid, error_msg = validate_tax_code(tax_code)
     if not is_valid:
         flash(error_msg, "danger")
         return redirect(url_for("main.recruiter_request"))
-
-    # Check for duplicate Tax Code
     if Company.query.filter_by(tax_code=tax_code.strip()).first():
         flash("Mã số thuế này đã được đăng ký trên hệ thống.", "danger")
         return redirect(url_for("main.recruiter_request"))
-
-    # Concatenate address and city
-    location = f"{address}, {city}" if address else city
-
-    # Xử lý File (Giả lập hoặc lấy tên file để lưu vào DB)
+    city_obj = db.session.get(Location, city_id)
+    city_name = city_obj.name if city_obj else ""
+    location = f"{address}, {city_name}" if address else city_name
     avatar_file = request.files.get("avatar")
     license_file = request.files.get("businessLicense")
     
     business_license_path = "pending"
     if license_file and license_file.filename:
-        business_license_path = license_file.filename # Trong thực tế sẽ dùng secure_filename và save()
-
+        business_license_path = license_file.filename
     from datetime import datetime
     establish_date = None
     if establish_date_str:
@@ -248,15 +229,14 @@ def register_company():
             establish_date = datetime.strptime(establish_date_str, "%Y-%m-%d").date()
         except ValueError:
             pass
-            
-    # Tạo công ty mới
     new_company = Company(
         name=name,
         tax_code=tax_code.strip(),
         location=location,
+        city_id=city_id,
         website=website,
         establish_date=establish_date,
-        scale=scale,
+        scale_id=scale_id,
         is_approved=False,
         business_license=business_license_path,
         avatar_url=avatar_file.filename if avatar_file and avatar_file.filename else None
@@ -265,8 +245,6 @@ def register_company():
     try:
         db.session.add(new_company)
         db.session.flush()
-        
-        # Tạo recruiter cho user này
         recruiter = Recruiter(
             user_id=user.id,
             company_id=new_company.id,
@@ -277,16 +255,13 @@ def register_company():
         db.session.add(recruiter)
         user.is_employer = True
         db.session.commit()
-        
-        # Cập nhật session ngay lập tức
         session["user_role"] = "employer"
         session["user_name"] = f"{user.last_name or ''} {user.first_name or ''}".strip() or user.email
-        
         flash("Yêu cầu của bạn đã được gửi đi, vui lòng chờ admin phê duyệt công ty.", "success")
         return redirect(url_for("main.index"))
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"DEBUG DB ERROR: {str(e)}") # In ra console để bạn theo dõi
+        print(f"DEBUG DB ERROR: {str(e)}")
         flash(f"Lỗi hệ thống: {str(e)[:100]}...", "danger")
         return redirect(url_for("main.recruiter_request"))
     except Exception as e:
@@ -297,38 +272,25 @@ def register_company():
 
 @main_bp.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "GET" and request.args.get("next"):
+    next_url = request.args.get("next") or request.form.get("next")
+    if request.method == "GET" and next_url:
         flash("Bạn cần đăng nhập để tiếp tục chức năng này.", "warning")
 
     if request.method == "POST":
         success, message = login_with_password(request.form)
-        flash(message, "success" if success else "danger")
         if success:
-            return redirect(url_for("main.index"))
+            flash(message, "success")
+            return redirect(next_url or url_for("main.index"))
         flash(message, "danger")
 
     return render_template(
         "auth/login.html",
+        next_url=next_url,
         google_login_ready=bool(
             current_app.config.get("GOOGLE_CLIENT_ID")
             and current_app.config.get("GOOGLE_CLIENT_SECRET")
         ),
     )
-
-
-@main_bp.route("/account", methods=["GET", "POST"])
-def account():
-    user = require_logged_in_user()
-    if not user:
-        return redirect(url_for("main.login"))
-
-    if request.method == "POST":
-        success, message = update_account_profile(user, request.form, request.files)
-        flash(message, "success" if success else "danger")
-        return redirect(url_for("main.account"))
-
-    return render_template("public/account.html", user=user)
-
 
 @main_bp.route("/login/google")
 def google_login():
@@ -336,14 +298,13 @@ def google_login():
         flash("Google đăng nhập chưa được cấu hình. Hãy thêm GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET.", "warning")
         return redirect(url_for("main.login"))
 
-    # Lưu trạng thái nhà tuyển dụng vào session để xử lý sau khi callback
+    next_url = request.args.get("next")
     if request.args.get("is_employer") == "true":
         session["google_is_employer"] = True
     else:
         session.pop("google_is_employer", None)
 
-    state = build_google_state_token()
-
+    state = build_google_state_token(next_url=next_url)
     query = {
         "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
         "redirect_uri": build_google_redirect_uri(),
@@ -364,7 +325,8 @@ def google_callback():
         return redirect(url_for("main.login"))
 
     try:
-        validate_google_state_token(returned_state)
+        state_payload = validate_google_state_token(returned_state)
+        next_url = state_payload.get("next")
     except (BadSignature, BadTimeSignature):
         flash("Phiên đăng nhập Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.", "danger")
         return redirect(url_for("main.login"))
@@ -382,10 +344,7 @@ def google_callback():
     try:
         token_data = fetch_google_tokens(code)
         profile = fetch_google_userinfo(token_data["access_token"])
-        
-        # Kiểm tra xem user có muốn đăng ký làm recruiter không (lấy từ session đã lưu ở route google_login)
         target_is_employer = session.pop("google_is_employer", False)
-        
         success, message = login_with_google_profile(profile)
 
         if success:
@@ -399,18 +358,30 @@ def google_callback():
 
             flash(message, "success")
             if user and user.is_admin:
-                return redirect(url_for("admin_panel.index"))
-            return redirect(url_for("main.index"))
+                return redirect(next_url or url_for("admin_panel.index"))
+            return redirect(next_url or url_for("main.index"))
 
         flash(message, "danger")
-        return redirect(url_for("main.login"))
-    except (HTTPError, URLError, KeyError, SQLAlchemyError, json.JSONDecodeError):
-        from app import db
-
+        return redirect(url_for("main.login", next=next_url))
+    except Exception as e:
+        print(f"GOOGLE LOGIN ERROR: {str(e)}")
         db.session.rollback()
-        flash("Không thể hoàn tất đăng nhập Google lúc này. Vui lòng kiểm tra lại cấu hình và thử lại.", "danger")
-        return redirect(url_for("main.login"))
+        flash(f"Không thể hoàn tất đăng nhập Google lúc này: {str(e)}", "danger")
+        return redirect(url_for("main.login", next=next_url))
 
+@main_bp.route("/account", methods=["GET", "POST"])
+def account():
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login", next=request.url))
+
+    if request.method == "POST":
+        success, message = update_account_profile(user, request.form, request.files)
+        flash(message, "success" if success else "danger")
+        if success:
+            return redirect(url_for("main.account"))
+
+    return render_template("public/account.html", user=user)
 
 @main_bp.route("/logout", methods=["POST"])
 def logout():
@@ -437,8 +408,6 @@ def recruiter_posts():
     if not recruiter or not recruiter.company_id:
         flash("Tài khoản của bạn chưa liên kết với công ty nào.", "warning")
         return redirect(url_for("main.recruiter_request"))
-
-    # Lấy tất cả bài đăng của công ty đó
     posts = Post.query.filter(Post.recruiter.has(company_id=recruiter.company_id)).order_by(Post.created_at.desc()).all()
 
     return render_template("public/company_posts.html", posts=posts, company=recruiter.company)
@@ -451,12 +420,8 @@ def manage_candidates(post_id):
         return redirect(url_for("main.login"))
 
     post = Post.query.get_or_404(post_id)
-
-    # Lấy thông tin recruiter của user hiện tại và recruiter tạo tin
     current_recruiter = Recruiter.query.filter_by(user_id=user.id).first()
     post_recruiter = Recruiter.query.filter_by(user_id=post.recruiter_id).first()
-
-    # Kiểm tra: Phải cùng công ty mới được quản lý
     if not current_recruiter or not post_recruiter or current_recruiter.company_id != post_recruiter.company_id:
         flash("Bạn không có quyền quản lý tin này (không thuộc cùng công ty).", "danger")
         return redirect(url_for("main.index"))
@@ -467,8 +432,6 @@ def manage_candidates(post_id):
 
     query = get_applications_for_post(post_id, status_filter, sort_by_ai)
     pagination = query.paginate(page=page, per_page=10, error_out=False)
-
-    # Tính toán thống kê chính xác cho từng trạng thái
     stats = {
         "all": Application.query.filter_by(post_id=post_id).count(),
         "received": Application.query.filter_by(post_id=post_id, status='RECEIVED').count(),
@@ -494,10 +457,7 @@ def run_ai_screening(post_id):
 
     post = Post.query.get_or_404(post_id)
     for app in post.applications:
-        score, analysis = calculate_ai_score(app.cv_id, post_id)
-        app.ai_score = score
-        app.ai_analysis = analysis
-
+        app.ai_score = calculate_ai_score(app.cv_id, post_id)
     db.session.commit()
     flash("Đã hoàn tất sàng lọc hồ sơ bằng AI.", "success")
     return redirect(url_for("main.manage_candidates", post_id=post_id, sort_by_ai=1))
@@ -512,29 +472,6 @@ def change_app_status():
         flash("Lỗi khi cập nhật trạng thái.", "danger")
     return redirect(request.referrer)
 
-@main_bp.route("/talent/view-cv/<int:user_id>")
-def view_cv_talent(user_id):
-    user = require_logged_in_user()
-    if not user or not user.is_employer:
-        flash("Bạn cần quyền nhà tuyển dụng để truy cập trang này.", "danger")
-        return redirect(url_for("main.login"))
-
-    target_user = db.session.get(User, user_id)
-    if not target_user or target_user.is_employer or not target_user.is_open_to_work:
-        flash("Không tìm thấy ứng viên hoặc ứng viên không ở chế độ tìm việc.", "warning")
-        return redirect(url_for("main.index"))
-
-    # Lấy CV mặc định
-    cv = CV.query.filter_by(user_id=user_id, is_default=True).first()
-    if not cv:
-        cv = CV.query.filter_by(user_id=user_id).first()
-    
-    if not cv:
-        flash("Ứng viên chưa cập nhật hồ sơ CV.", "info")
-        return redirect(request.referrer or url_for("main.index"))
-
-    return render_template("public/view_cv.html", cv=cv, target_user=target_user)
-
 @main_bp.route("/manage-candidates/view-cv/<int:application_id>")
 def view_candidate_cv(application_id):
     user = require_logged_in_user()
@@ -543,8 +480,6 @@ def view_candidate_cv(application_id):
         return redirect(url_for("main.login"))
 
     application = Application.query.get_or_404(application_id)
-
-    # Kiểm tra quyền sở hữu bài đăng
     if application.post.recruiter_id != user.id:
         flash("Bạn không có quyền xem hồ sơ này.", "danger")
         return redirect(url_for("main.index"))
@@ -555,8 +490,7 @@ def view_candidate_cv(application_id):
 def report_post(post_id):
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-
+        return redirect(url_for("main.login", next=request.url))
     reason = request.form.get("reason")
     description = request.form.get("description", "").strip()
 
@@ -598,8 +532,7 @@ def preview_resume_endpoint():
 def resume():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-
+        return redirect(url_for("main.login", next=request.url))
     cv_id = request.args.get("cv_id", type=int)
     action = request.args.get("action")
 
@@ -622,12 +555,20 @@ def resume():
         cv = get_user_cv(user)
         
     return render_template("candidate/resume.html", user=user, cv=cv)
-
-
+@main_bp.route("/company/<int:company_id>")
+def company_details(company_id):
+    company = Company.query.get_or_404(company_id)
+    posts = Post.query.join(Recruiter).filter(
+        Recruiter.company_id == company_id,
+        Post.status.in_(["ACTIVE", "PINNED"])
+    ).order_by(
+        Post.status.desc(),
+        Post.last_modified.desc()
+    ).all()
+    return render_template("public/company_details.html", company=company, posts=posts)
 @main_bp.route("/post/<int:post_id>")
 def post_details(post_id):
     post = Post.query.get_or_404(post_id)
-    # Fetch related jobs from the same company, excluding the current one
     related_posts = Post.query.filter(
         Post.status.in_(["ACTIVE", "PINNED"]),
         Post.id != post_id
@@ -650,22 +591,17 @@ def post_details(post_id):
 def apply_job(post_id):
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-        
+        return redirect(url_for("main.login", next=request.url))
     if user.is_employer:
         flash("Nhà tuyển dụng không thể ứng tuyển.", "warning")
         return redirect(url_for("main.post_details", post_id=post_id))
         
     post = Post.query.get_or_404(post_id)
-    
-    # Update phone if provided
     new_phone = request.form.get("phone")
     if new_phone and new_phone != user.phone:
         user.phone = new_phone
     
     cv = get_user_cv(user)
-    
-    # Handle New CV Upload
     if 'new_cv' in request.files and request.files['new_cv'].filename != '':
         new_cv_file = request.files['new_cv']
         ext = ("." + new_cv_file.filename.rsplit(".", 1)[1].lower()) if "." in new_cv_file.filename else ""
@@ -686,8 +622,6 @@ def apply_job(post_id):
     if not cv or (not cv.cv_url and not cv.cv_content):
         flash("Vui lòng cập nhật hồ sơ CV (tải lên file hoặc điền thông tin) trước khi ứng tuyển.", "warning")
         return redirect(url_for("main.resume"))
-        
-    # Check if already applied
     existing_app = Application.query.filter_by(cv_id=cv.id, post_id=post.id).first()
     if existing_app:
         flash("Bạn đã ứng tuyển vào vị trí này rồi.", "info")
@@ -696,17 +630,13 @@ def apply_job(post_id):
     cover_letter = request.form.get("cover_letter")
     application = Application(cv_id=cv.id, post_id=post.id, cover_letter=cover_letter)
     db.session.add(application)
-    db.session.flush() # Lấy ID của application
-
-    # Ghi lại lịch sử ban đầu
+    db.session.flush()
     history = ApplicationStatusHistory(
         application_id=application.id,
         new_status='RECEIVED',
         notes="Ứng viên nộp hồ sơ trực tuyến."
     )
     db.session.add(history)
-
-    # Notify recruiter
     notification = Notification(
         user_id=post.recruiter_id,
         content=f"Có ứng viên mới ứng tuyển vào vị trí {post.title}.",
@@ -727,8 +657,7 @@ def apply_job(post_id):
 def applied_jobs():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-        
+        return redirect(url_for("main.login", next=request.url))
     cv = CV.query.filter_by(user_id=user.id).first()
     
     q = request.args.get('q', '').strip()
@@ -750,8 +679,7 @@ def applied_jobs():
 def resume_management():
     user = require_logged_in_user()
     if not user:
-        return redirect(url_for("main.login"))
-    
+        return redirect(url_for("main.login", next=request.url))
     q = request.args.get('q', '').strip()
     page = request.args.get("page", 1, type=int)
 

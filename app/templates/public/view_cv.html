@@ -148,18 +148,20 @@
                     </p>
                 </div>
 
-                    <div class="mb-4">
-                        <h5 class="section-title"><i class="fas fa-tools text-primary"></i> Kỹ năng chuyên môn</h5>
-                        <div>
-                            {% if application.cv.skills %}
-                                {% for skill in application.cv.skills %}
-                                    <span class="skill-tag">{{ skill.skill_name }}</span>
-                                {% endfor %}
-                            {% else %}
-                                <span class="text-muted">Chưa cập nhật kỹ năng.</span>
-                            {% endif %}
-                        </div>
+                <div class="mb-4">
+                    <h5 class="section-title"><i class="fas fa-tools text-primary"></i> Kỹ năng chuyên môn</h5>
+                    <div class="skill-badges">
+                        {% if application.cv.skills %}
+                            {% for skill in application.cv.skills.split(',') %}
+                                {% if skill.strip() %}
+                                    <span class="skill-badge">{{ skill.strip() }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">Chưa cập nhật kỹ năng.</span>
+                        {% endif %}
                     </div>
+                </div>
             </div>
         </div>
     </div>

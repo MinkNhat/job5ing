@@ -9,8 +9,8 @@
         </div>
 
         <!-- FILTER -->
-        <form class="row g-3 mb-4" method="get" action="{{ url_for('admin_panel.accounts') }}">
-            <div class="col-md-5">
+        <form class="filter-row-4 mb-4" method="get" action="{{ url_for('admin_panel.accounts') }}">
+            <div class="form-group">
                 <input
                     type="text"
                     class="form-control"
@@ -20,7 +20,7 @@
                 >
             </div>
 
-            <div class="col-md-3">
+            <div class="form-group">
                 <select class="form-select" name="role">
                     <option value="all" {% if request.args.get('role', 'all') == 'all' %}selected{% endif %}>Tất cả vai trò</option>
                     <option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Quản trị</option>
@@ -29,7 +29,7 @@
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="form-group">
                 <select class="form-select" name="status">
                     <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
                     <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Hoạt động</option>
@@ -37,7 +37,7 @@
                 </select>
             </div>
 
-            <div class="col-md-1 d-flex gap-2">
+            <div class="btn-group-filter">
                 <button type="submit" class="btn btn-filter w-100">Lọc</button>
             </div>
         </form>

@@ -21,17 +21,14 @@
         </div>
 
         <div class="content-card mt-0">
-            <!-- Toolbar (Standardized 4 columns) -->
-            <form class="filter-row-4" method="GET">
-                <div class="form-group">
-                    <label class="form-label">Tên hồ sơ</label>
-                    <input type="text" name="q" placeholder="Tìm kiếm..." class="form-control" value="{{ request.args.get('q', '') }}">
+            <!-- Toolbar (Search only) -->
+            <form method="GET" class="mb-4" style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center;">
+                <div class="form-group mb-0">
+                    <input type="text" name="q" placeholder="Tìm kiếm theo tên hồ sơ..." class="form-control" value="{{ request.args.get('q', '') }}" style="height: 45px;">
                 </div>
-                <div class="form-group"></div>
-                <div class="form-group"></div>
-                <div class="btn-group-filter">
-                    <button type="submit" class="btn-orange flex-grow-1">Lọc</button>
-                    <a href="{{ url_for('main.resume_management') }}" class="btn-outline-orange">Xóa lọc</a>
+                <div class="btn-group-filter d-flex gap-2">
+                    <button type="submit" class="btn-orange" style="height: 45px; min-width: 120px;">Tìm kiếm</button>
+                    <a href="{{ url_for('main.resume_management') }}" class="btn-outline-orange d-flex align-items-center justify-content-center" style="height: 45px; min-width: 120px; white-space: nowrap;">Xóa tìm kiếm</a>
                 </div>
             </form>
 

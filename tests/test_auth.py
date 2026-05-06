@@ -47,7 +47,7 @@ class AuthTestCase(unittest.TestCase):
             name="Công ty Cổ phần Job5ing",
             tax_code="1234567890",
             business_license="test_license.pdf",
-            scale="1-50 nhân viên"
+            scale_id=1
         )
         db.session.add(company)
 
@@ -168,7 +168,7 @@ class AuthTestCase(unittest.TestCase):
             },
             follow_redirects=True
         )
-        self.assertIn("Đăng ký công ty thành công", response.get_data(as_text=True))
+        self.assertIn("Yêu cầu của bạn đã được gửi đi", response.get_data(as_text=True))
         
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["user_role"], "employer")

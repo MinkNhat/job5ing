@@ -1,9 +1,11 @@
 from flask import render_template, request, redirect, url_for, flash, session, jsonify
-from app.models import User, Post, Recruiter, Application, Company, db
+from app.models import (
+    User, Post, PostSkill, Recruiter, Application, Company, db,
+    ExperienceOption, SalaryOption, CompanyScale, Location
+)
 from app.main.services import require_logged_in_user
 from sqlalchemy import func
 from datetime import datetime
-from app.main.constants import EXPERIENCE_OPTIONS, SALARY_OPTIONS
 from .service import (
     get_dashboard_stats,
     get_current_recruiter,
@@ -18,17 +20,12 @@ from . import recruiter_bp
 
 @recruiter_bp.before_request
 def restrict_to_recruiter():
-    # Only allow access to recruiters
-    # Some endpoints might need to be open if they are shared, but here they are all under /recruiter/
     recruiter = get_current_recruiter()
     if not recruiter:
-        # Check if the user is logged in but not an approved recruiter
         user = require_logged_in_user()
         if not user or not user.is_employer:
             flash("Bạn cần đăng nhập với quyền nhà tuyển dụng.", "danger")
             return redirect(url_for('main.login'))
-        
-        # Check if they have a recruiter record
         recruiter = Recruiter.query.get(user.id)
         if not recruiter or not recruiter.is_approved:
             flash("Tài khoản của bạn chưa được duyệt quyền nhà tuyển dụng hoặc chưa liên kết công ty.", "warning")
@@ -49,8 +46,6 @@ def index():
 def dashboard():
     recruiter = get_current_recruiter()
     company_id = recruiter.company_id
-
-    # 1. Thống kê (Stats)
     total_apps = db.session.query(func.count(Application.id))\
         .join(Post)\
         .join(Recruiter)\
@@ -63,12 +58,10 @@ def dashboard():
         .join(Post)\
         .join(Recruiter)\
         .filter(Recruiter.company_id == company_id, Application.status == 'RECEIVED').scalar() or 0
-
-    # 2. Tìm kiếm và Lọc
     q = request.args.get('q', '').strip()
     status_filter = request.args.get('status', '').upper()
-    experience_filter = request.args.get('experience', '').strip()
-    salary_filter = request.args.get('salary', '').strip()
+    experience_id = request.args.get('experience', type=int)
+    salary_id = request.args.get('salary', type=int)
     page = request.args.get('page', 1, type=int)
 
     query = Post.query.join(Recruiter).filter(Recruiter.company_id == company_id)
@@ -77,17 +70,14 @@ def dashboard():
         query = query.filter(Post.title.ilike(f'%{q}%'))
     if status_filter:
         query = query.filter(Post.status == status_filter)
-    if experience_filter:
-        query = query.filter(Post.experience == experience_filter)
-    if salary_filter:
-        query = query.filter(Post.salary_range == salary_filter)
-
+    if experience_id:
+        query = query.filter(Post.experience_id == experience_id)
+    if salary_id:
+        query = query.filter(Post.salary_id == salary_id)
     pagination = query.order_by(Post.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
     jobs = pagination.items
     
     total_company_jobs = Post.query.join(Recruiter).filter(Recruiter.company_id == company_id).count()
-
-    # 3. Mapping trạng thái bài đăng
     status_map = {
         'ACTIVE': ('Đang hiển thị', 'badge-status-active'),
         'PINNED': ('Đang ghim', 'badge-status-active'),
@@ -111,9 +101,8 @@ def dashboard():
                                'active_jobs': active_jobs_count,
                                'pending_apps': pending_apps
                            },
-                           experience_options=EXPERIENCE_OPTIONS,
-                           salary_options=SALARY_OPTIONS)
-
+                           experience_options=ExperienceOption.query.all(),
+                           salary_options=SalaryOption.query.all())
 @recruiter_bp.route('/job/<int:job_id>', methods=['GET'])
 def get_job(job_id):
     recruiter = get_current_recruiter()
@@ -128,8 +117,8 @@ def get_job(job_id):
             "title": job.title,
             "description": job.description,
             "skills": job.skills,
-            "experience": job.experience,
-            "salary_range": job.salary_range,
+            "experience_id": job.experience_id,
+            "salary_id": job.salary_id,
             "deadline": job.deadline.isoformat() if job.deadline else None,
             "status": job.status
         }
@@ -156,17 +145,12 @@ def manage_job(job_id=None):
 
         job.title = data.get('title')
         job.description = data.get('description')
-        
-        # Xử lý skills
-        from app.models import PostSkill
-        skills_raw = data.get('skills', '').strip()
-        PostSkill.query.filter_by(post_id=job.id).delete()
-        if skills_raw:
-            for s_name in [s.strip() for s in skills_raw.split(',') if s.strip()]:
-                db.session.add(PostSkill(post_id=job.id, skill_name=s_name))
 
-        job.experience_id = data.get('experience', type=int) or None
-        job.salary_id = data.get('salary', type=int) or None
+        # Handle skills relationship
+        job.skills = data.get('skills')
+
+        job.experience_id = data.get('experience', type=int)
+        job.salary_id = data.get('salary', type=int)
         job.deadline = deadline
         
         new_status = data.get('status')
@@ -179,19 +163,16 @@ def manage_job(job_id=None):
             recruiter_id=recruiter.user_id,
             title=data.get('title'),
             description=data.get('description'),
-            experience_id=data.get('experience', type=int) or None,
-            salary_id=data.get('salary', type=int) or None,
+            experience_id=data.get('experience', type=int),
+            salary_id=data.get('salary', type=int),
             deadline=deadline,
             status='ACTIVE'
         )
         db.session.add(job)
-        db.session.flush() # Để lấy job.id
-        
-        from app.models import PostSkill
-        skills_raw = data.get('skills', '').strip()
-        if skills_raw:
-            for s_name in [s.strip() for s in skills_raw.split(',') if s.strip()]:
-                db.session.add(PostSkill(post_id=job.id, skill_name=s_name))
+        db.session.flush() # Get job.id for update_skills
+
+        # Handle skills relationship
+        job.skills = data.get('skills')
 
         msg = "Đăng tin mới thành công."
 
@@ -238,9 +219,10 @@ def company():
 
             data = {
                 "name": request.form.get("name"),
-                "location": request.form.get("location"),
+                "city_id": request.form.get("city_id", type=int),
+                "address": request.form.get("address"),
                 "website": request.form.get("website"),
-                "scale": request.form.get("scale"),
+                "scale_id": request.form.get("scale_id", type=int),
                 "description": request.form.get("description"),
             }
             update_company_info(company.id, recruiter.user_id, data, logo_file)
@@ -250,9 +232,9 @@ def company():
             flash(str(e), "danger")
         except Exception as e:
             flash(f"Lỗi khi cập nhật: {str(e)}", "danger")
-
-    return render_template("recruiter/company.html", company=company, recruiter=recruiter)
-
+    return render_template("recruiter/company.html",
+                           company=company,
+                           recruiter=recruiter)
 @recruiter_bp.route("/members")
 def manage_members():
     recruiter = get_current_recruiter()

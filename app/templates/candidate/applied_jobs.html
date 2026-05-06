@@ -18,26 +18,23 @@
         </div>
 
         <div class="content-card mt-0">
-            <!-- Toolbar (Standardized 4 columns) -->
-            <form class="filter-row-4" method="GET">
+            <!-- Toolbar (Standardized 3 columns) -->
+            <form class="filter-row-3" method="GET">
                 <div class="form-group">
-                    <label class="form-label">Tên công việc</label>
-                    <input type="text" name="q" placeholder="Tìm kiếm..." class="form-control" value="{{ request.args.get('q', '') }}">
+                    <input type="text" name="q" placeholder="Tìm kiếm tên công việc..." class="form-control" value="{{ request.args.get('q', '') }}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Trạng thái</label>
                     <select name="status" class="form-select">
-                        <option value="">Tất cả trạng thái</option>
+                        <option value="">Tất cả trạng thái ứng tuyển</option>
                         <option value="RECEIVED" {% if request.args.get('status') == 'RECEIVED' %}selected{% endif %}>Đã nộp</option>
                         <option value="INTERVIEW" {% if request.args.get('status') == 'INTERVIEW' %}selected{% endif %}>Phỏng vấn</option>
                         <option value="APPROVED" {% if request.args.get('status') == 'APPROVED' %}selected{% endif %}>Đồng ý</option>
                         <option value="REJECT" {% if request.args.get('status') == 'REJECT' %}selected{% endif %}>Từ chối</option>
                     </select>
                 </div>
-                <div class="form-group"></div>
                 <div class="btn-group-filter">
-                    <button type="submit" class="btn-orange flex-grow-1">Lọc</button>
-                    <a href="{{ url_for('main.applied_jobs') }}" class="btn-outline-orange">Xóa lọc</a>
+                    <button type="submit" class="btn-orange flex-grow-1">Tìm kiếm</button>
+                    <a href="{{ url_for('main.applied_jobs') }}" class="btn-outline-orange d-flex align-items-center justify-content-center">Xóa tìm kiếm</a>
                 </div>
             </form>
 

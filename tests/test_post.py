@@ -41,7 +41,7 @@ class PostTestCase(unittest.TestCase):
             name="Job5ing Corp",
             tax_code="1234567890",
             location="Hồ Chí Minh",
-            scale="100-500 nhân viên",
+            scale_id=1,
             website="https://job5ing.com",
             business_license="test_license.pdf"
         )
@@ -74,8 +74,8 @@ class PostTestCase(unittest.TestCase):
             title="Senior Python Developer",
             description="Looking for an expert Python developer.",
             skills="Python, Flask, SQLAlchemy",
-            experience="3-5 years",
-            salary_range="2000 - 3000 USD",
+            experience_id=1,
+            salary_id=1,
             deadline=(datetime.now() + timedelta(days=30)).date(),
             status="ACTIVE",
             recruiter_id=recruiter.user_id
@@ -85,8 +85,8 @@ class PostTestCase(unittest.TestCase):
             title="Junior Frontend Developer",
             description="Looking for a React developer.",
             skills="React, CSS, HTML",
-            experience="1 year",
-            salary_range="1000 - 1500 USD",
+            experience_id=1,
+            salary_id=1,
             deadline=(datetime.now() + timedelta(days=15)).date(),
             status="ACTIVE",
             recruiter_id=recruiter.user_id
@@ -114,9 +114,11 @@ class PostTestCase(unittest.TestCase):
         
         self.assertIn("Senior Python Developer", data)
         self.assertIn("Job5ing Corp", data)
-        self.assertIn("2000 - 3000 USD", data)
-        self.assertIn("3-5 years", data)
-        self.assertIn("Python, Flask, SQLAlchemy", data)
+        self.assertIn("Thỏa thuận", data)
+        self.assertIn("Không yêu cầu", data)
+        self.assertIn("Python", data)
+        self.assertIn("Flask", data)
+        self.assertIn("SQLAlchemy", data)
         self.assertIn("Hồ Chí Minh", data)
 
     def test_post_details_404(self):

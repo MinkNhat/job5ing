@@ -17,15 +17,11 @@ import fitz
 from docx import Document
 
 from app import db
-from app.models import User, CV
-from app.models import User, CV, Post, PostReport, Recruiter
-
+from app.models import User, CV, CVSkill, Post, PostSkill, PostReport, Recruiter
 def submit_post_report(user, post_id, reason, description):
     post = db.session.get(Post, post_id)
     if not post:
         return False, "Không tìm thấy tin tuyển dụng."
-
-    # Kiểm tra xem user này đã báo cáo tin này chưa (để tránh spam)
     existing_report = PostReport.query.filter_by(user_id=user.id, post_id=post_id, is_resolved=False).first()
     if existing_report:
         return False, "Bạn đã gửi báo cáo cho tin tuyển dụng này và đang chờ xử lý."
@@ -38,8 +34,6 @@ def submit_post_report(user, post_id, reason, description):
             description=description
         )
         db.session.add(new_report)
-
-        # Đánh dấu tin bị báo cáo để Admin dễ thấy
         post.is_reported = True
 
         db.session.commit()
@@ -167,8 +161,6 @@ def update_account_profile(user, form_data, files=None):
     is_valid, date_of_birth, error_message = parse_date_input(form_data.get("date_of_birth"))
     if not is_valid:
         return False, error_message
-
-    # Handle avatar upload
     if files and "avatar" in files:
         avatar_file = files["avatar"]
         if avatar_file and avatar_file.filename:
@@ -191,9 +183,6 @@ def update_account_profile(user, form_data, files=None):
     user.sex = (form_data.get("sex") or "").strip() or None
     user.avatar_url = avatar_url or None
     user.date_of_birth = date_of_birth
-
-    # --- Xử lý CV ---
-    # Lấy hoặc tạo CV cho user (giả thiết mỗi user có 1 CV chính hiển thị trong profile)
     cv = CV.query.filter_by(user_id=user.id).first()
     if not cv:
         cv = CV(user_id=user.id)
@@ -202,16 +191,11 @@ def update_account_profile(user, form_data, files=None):
     cv.title = (form_data.get("cv_title") or "").strip() or None
     cv.summary = (form_data.get("cv_summary") or "").strip() or None
     cv.education = (form_data.get("cv_education") or "").strip() or None
-    cv.experience = (form_data.get("cv_experience") or "").strip() or None
-    
-    # Xử lý skills
-    from app.models import CVSkill
-    cv_skills_raw = (form_data.get("cv_skills") or "").strip()
-    CVSkill.query.filter_by(cv_id=cv.id).delete()
-    if cv_skills_raw:
-        for s_name in [s.strip() for s in cv_skills_raw.split(',') if s.strip()]:
-            db.session.add(CVSkill(cv_id=cv.id, skill_name=s_name))
 
+    # Handle skills relationship
+    cv.skills = (form_data.get("cv_skills") or "").strip()
+
+    cv.experience = (form_data.get("cv_experience") or "").strip() or None
     try:
         db.session.commit()
         sync_authenticated_session(user)
@@ -260,7 +244,7 @@ def create_account(form_data):
         phone=phone,
         is_active=True,
         is_admin=False,
-        is_employer=False, # Wait for company confirmation
+        is_employer=False,
         created_at=datetime.utcnow(),
     )
 
@@ -313,12 +297,12 @@ def build_google_redirect_uri():
         return configured_uri
     return url_for("main.google_callback", _external=True)
 
-
-def build_google_state_token():
+def build_google_state_token(next_url=None):
     serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     payload = {
         "nonce": secrets.token_urlsafe(16),
         "issued_at": int(datetime.utcnow().timestamp()),
+        "next": next_url
     }
     return serializer.dumps(payload, salt="google-oauth-state")
 
@@ -413,18 +397,7 @@ def extract_text_from_file(file_obj, file_ext):
 def parse_resume_gemini(text, file_obj=None):
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
-        prompt = """Extract resume data and return ONLY valid JSON:
-            {
-                "title": "job title or null",
-                "summary": "professional summary or null",
-                "skills": "comma-separated skills or null",
-                "experience": "work experience or null",
-                "education": "education or null"
-            }
-
-            Resume:
-            """ + (text or "")
-
+        prompt =  + (text or "")
         if text:
             response = model.generate_content(prompt)
         else:
@@ -435,7 +408,6 @@ def parse_resume_gemini(text, file_obj=None):
                 prompt
             ])
 
-        # parse json
         response_text = response.text.strip()
         try:
             json_start = response_text.find('{')
@@ -486,8 +458,6 @@ def preview_resume(files=None):
         is_valid, cv_data, error = parse_resume_gemini(text, file if not text else None)
         if not is_valid:
             return False, None, None, error
-
-        # Upload to Cloudinary
         file.seek(0)
         result = cloudinary.uploader.upload(
             file,
@@ -517,32 +487,29 @@ def save_resume(user, form_data):
             
         if not cv:
             cv = CV(user_id=user.id)
+            db.session.add(cv)
+            db.session.flush()
 
         cv.title = (form_data.get("title") or "").strip() or None
         cv.summary = (form_data.get("summary") or "").strip() or None
+
+        # Handle skills relationship
+        cv.skills = (form_data.get("skills") or "").strip()
+
         cv.education = (form_data.get("education") or "").strip() or None
         cv.experience = (form_data.get("experience") or "").strip() or None
-        
-        # Xử lý skills
-        from app.models import CVSkill
-        skills_raw = (form_data.get("skills") or "").strip()
-        CVSkill.query.filter_by(cv_id=cv.id).delete()
-        if skills_raw:
-            for s_name in [s.strip() for s in skills_raw.split(',') if s.strip()]:
-                db.session.add(CVSkill(cv_id=cv.id, skill_name=s_name))
-
         if form_data.get("cv_url"):
             cv.cv_url = form_data.get("cv_url")
 
+        # Get skill names as string for cv_content
         cv_content = {
             "title": cv.title,
             "summary": cv.summary,
-            "skills": skills_raw,
+            "skills": cv.skills,
             "experience": cv.experience,
             "education": cv.education
         }
         cv.cv_content = json.dumps(cv_content, ensure_ascii=False)
-
         db.session.add(cv)
         db.session.commit()
         return True, "Lưu CV thành công"

@@ -9,8 +9,8 @@
         </div>
 
         <!-- FILTER -->
-        <form class="row g-3 mb-4" method="get" action="{{ url_for('admin_panel.posts') }}">
-            <div class="col-md-4">
+        <form class="filter-row-4 mb-4" method="get" action="{{ url_for('admin_panel.posts') }}">
+            <div class="form-group">
                 <input
                     type="text"
                     class="form-control"
@@ -20,7 +20,7 @@
                 >
             </div>
 
-            <div class="col-md-3">
+            <div class="form-group">
                 <select class="form-select" name="status">
                     <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
                     <option value="ACTIVE" {% if request.args.get('status') == 'ACTIVE' %}selected{% endif %}>Đang hoạt động</option>
@@ -31,7 +31,7 @@
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="form-group">
                 <select class="form-select" name="is_reported">
                     <option value="all" {% if request.args.get('is_reported', 'all') == 'all' %}selected{% endif %}>Tất cả tin</option>
                     <option value="1" {% if request.args.get('is_reported') == '1' %}selected{% endif %}>Bị báo cáo</option>
@@ -39,7 +39,7 @@
                 </select>
             </div>
 
-            <div class="col-md-2">
+            <div class="btn-group-filter">
                 <button type="submit" class="btn btn-filter w-100">Lọc</button>
             </div>
         </form>
