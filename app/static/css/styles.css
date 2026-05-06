@@ -1103,7 +1103,7 @@ input.form-control {
 .cv-applied-history { border-top: 1px dashed #e2e8f0; padding-top: 16px; }
 .history-title { margin: 0 0 12px; font-size: 0.9rem; font-style: italic; color: var(--site-subtle); font-weight: 600; }
 .empty-history-text { margin: 0; font-size: 0.9rem; color: #94a3b8; }
-.applied-jobs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.applied-jobs-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
 .applied-job-item { border: 1px solid #f1f5f9; background: #fcfdfe; border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s; }
 .applied-job-item:hover { border-color: #cbd5e1; }
 .applied-job-info { display: flex; flex-direction: column; gap: 4px; }
@@ -1260,4 +1260,153 @@ input.form-control {
     border-color: #00b14f;
     color: #00b14f;
     background-color: rgba(0, 177, 79, 0.05);
+}
+
+/* Small Skill Badges for Cards */
+.job-card-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.skill-badge-sm {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background-color: #f8fafc;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* VIP/Gold Section & Card Styling - TopCV Style */
+.vip-section {
+    padding: 40px 0;
+    background-color: #f4f7f6;
+    margin-bottom: 20px;
+}
+
+.vip-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.vip-title h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #333;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.vip-title i {
+    color: #ff9550;
+    font-size: 1.8rem;
+}
+
+.vip-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.job-card.vip-gold {
+    background: #fff;
+    border: 1px solid #ffb43f;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(255, 180, 63, 0.1);
+    height: 100%;
+    align-items: center;
+}
+
+.job-card.vip-gold:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(255, 180, 63, 0.2);
+    background-color: rgba(255, 180, 63, 0.02);
+}
+
+.job-card.vip-gold .job-card-logo {
+    width: 80px;
+    height: 80px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 5px;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.job-card.vip-gold .job-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.job-card.vip-gold .job-card-body h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #2d3436;
+}
+
+.job-card.vip-gold .company-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ff9550;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.job-card.vip-gold .job-info-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: auto;
+    font-size: 0.85rem;
+    color: #636e72;
+}
+
+.job-card.vip-gold .job-salary {
+    color: #00b14f;
+    font-weight: 700;
+}
+
+.vip-badge-tag {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: linear-gradient(135deg, #ffd700, #ff9550);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+/* Newest List Pinned Badge - Crown on Logo */
+.logo-crown-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ff9550;
+    color: #fff;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 2;
+    border: 2px solid #fff;
 }

@@ -40,6 +40,14 @@
             </div>
             
             <div class="job-header-actions">
+                {% if current_user and not current_user.is_admin and not current_user.is_employer %}
+                <button class="btn btn-outline-danger me-2" title="Báo cáo tin này"
+                        style="border-radius: 14px; padding: 12px 20px; font-weight: 700; display: flex; align-items: center; gap: 8px;"
+                        data-bs-toggle="modal" data-bs-target="#reportModal">
+                    <i class="fas fa-flag"></i> Báo cáo
+                </button>
+                {% endif %}
+
                 {% if current_user and current_user.is_employer %}
                     <!-- Nhà tuyển dụng không thể ứng tuyển -->
                 {% elif has_applied %}
@@ -51,6 +59,52 @@
                         <i class="fas fa-paper-plane"></i> Ứng tuyển ngay
                     </button>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Report Modal -->
+        <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header border-bottom-0 pt-4 px-4">
+                        <h5 class="modal-title fw-bold" id="reportModalLabel">Báo cáo tin tuyển dụng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="{{ url_for('main.report_post', post_id=post.id) }}" method="POST">
+                        <div class="modal-body px-4">
+                            <p class="text-muted mb-3 small">Bạn đang báo cáo tin: <strong>{{ post.title }}</strong></p>
+
+                            <label class="form-label fw-bold small text-uppercase">Lý do báo cáo:</label>
+                            <div class="mb-3">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="reason" id="reason1" value="Lừa đảo" required>
+                                    <label class="form-check-label" for="reason1">Dấu hiệu lừa đảo, đa cấp</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="reason" id="reason2" value="Sai sự thật">
+                                    <label class="form-check-label" for="reason2">Thông tin sai sự thật, hết hạn</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="reason" id="reason3" value="Spam">
+                                    <label class="form-check-label" for="reason3">Tin rác, nội dung không phù hợp</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="reason" id="reason4" value="Khác">
+                                    <label class="form-check-label" for="reason4">Lý do khác</label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reportDescription" class="form-label fw-bold small text-uppercase">Mô tả chi tiết (tùy chọn):</label>
+                                <textarea class="form-control" name="description" id="reportDescription" rows="3" placeholder="Nhập thêm chi tiết về vi phạm..." style="font-size: 0.9rem;"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top-0 px-4 pb-4">
+                            <button type="button" class="btn btn-light fw-semibold" data-bs-dismiss="modal">HỦY BỎ</button>
+                            <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">GỬI BÁO CÁO</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 

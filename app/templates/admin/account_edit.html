@@ -141,7 +141,7 @@
                     id="cv_skills"
                     name="cv_skills"
                     class="form-control"
-                    value="{{ request.form.get('cv_skills', cv.skills if cv else '') }}"
+                    value="{{ request.form.get('cv_skills', cv.skills if cv and cv.skills else '') }}"
                 >
             </div>
 

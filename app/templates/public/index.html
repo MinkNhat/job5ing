@@ -88,8 +88,78 @@
     </div>
 </section>
 
+{% if pinned_posts %}
+<section class="vip-section">
+    <div class="container">
+        <div class="vip-title">
+            <i class="fas fa-crown"></i>
+            <h2>Việc làm hấp dẫn nhất</h2>
+        </div>
+        <div class="job-grid">
+            {% for job in pinned_posts %}
+            <article class="job-card vip-gold" style="position: relative;">
+                <div class="vip-badge">
+                    <i class="fas fa-star"></i> HOT
+                </div>
+
+                {% if current_user and not current_user.is_admin and not current_user.is_employer %}
+                <button class="job-report-btn" title="Báo cáo tin này"
+                        data-bs-toggle="modal" data-bs-target="#reportModal"
+                        data-post-id="{{ job.id }}" data-post-title="{{ job.title }}">
+                    <i class="fas fa-flag"></i>
+                </button>
+                {% endif %}
+
+                <div class="job-card-logo">
+                    <a href="{{ url_for('main.post_details', post_id=job.id) }}">
+                        {% if job.recruiter.company.avatar_url %}
+                            <img src="{{ job.recruiter.company.avatar_url }}" alt="{{ job.recruiter.company.name }}">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/Logo_removebg.png') }}" alt="Job Logo">
+                        {% endif %}
+                    </a>
+                </div>
+                <div class="job-card-body">
+                    <h3>
+                        <a href="{{ url_for('main.post_details', post_id=job.id) }}" class="text-decoration-none" style="color: inherit;">
+                            {{ job.title }}
+                        </a>
+                    </h3>
+                    <p class="company-name">
+                        <a href="{{ url_for('main.company_details', company_id=job.recruiter.company_id) }}" class="text-decoration-none" style="color: #daa520; font-weight: 700;">
+                            {{ job.recruiter.company.name }}
+                        </a>
+                    </p>
+                    {% if job.skills %}
+                    <div class="job-card-skills mb-2">
+                        {% set skills_list = job.skills.split(',') %}
+                        {% for skill in skills_list[:3] %}
+                            {% if skill.strip() %}
+                                <span class="skill-badge-sm">{{ skill.strip() }}</span>
+                            {% endif %}
+                        {% endfor %}
+                        {% if skills_list|length > 3 %}
+                            <span class="skill-badge-sm">+{{ skills_list|length - 3 }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="job-card-tags">
+                        <span>{{ job.salary_ref.name if job.salary_ref else 'Thỏa thuận' }}</span>
+                        <span>{{ job.experience_ref.name if job.experience_ref else 'Không yêu cầu kinh nghiệm' }}</span>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
 <section class="jobs-section" id="jobs">
     <div class="container">
+        <div class="section-heading mb-4">
+            <h4 class="fw-bold"><i class="fas fa-briefcase me-2 text-primary"></i> Danh sách việc làm mới nhất</h4>
+        </div>
         <div class="job-grid">
             {% for job in pagination.items %}
             <article class="job-card" style="position: relative;">
@@ -107,7 +177,12 @@
                 </button>
                 {% endif %}
 
-                <div class="job-card-logo">
+                <div class="job-card-logo" style="position: relative;">
+                    {% if job.status == 'PINNED' %}
+                    <div class="logo-crown-badge" title="Tin ưu tiên">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    {% endif %}
                     <a href="{{ url_for('main.post_details', post_id=job.id) }}">
                         {% if job.recruiter.company.avatar_url %}
                             <img src="{{ job.recruiter.company.avatar_url }}" alt="{{ job.recruiter.company.name }}">
@@ -127,6 +202,19 @@
                                 {{ job.recruiter.company.name }}
                             </a>
                         </p>
+                        {% if job.skills %}
+                        <div class="job-card-skills mb-2">
+                            {% set skills_list = job.skills.split(',') %}
+                            {% for skill in skills_list[:3] %}
+                                {% if skill.strip() %}
+                                    <span class="skill-badge-sm">{{ skill.strip() }}</span>
+                                {% endif %}
+                            {% endfor %}
+                            {% if skills_list|length > 3 %}
+                                <span class="skill-badge-sm">+{{ skills_list|length - 3 }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                         <div class="job-card-tags">
                             <span>{{ job.salary_ref.name if job.salary_ref else 'Thỏa thuận' }}</span>
                             <span>{{ job.experience_ref.name if job.experience_ref else 'Không yêu cầu kinh nghiệm' }}</span>
@@ -222,10 +310,10 @@
 <style>
     .job-report-btn {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        bottom: 12px;
+        right: 15px;
         background: rgba(255, 255, 255, 0.8);
-        border: none;
+        border: 1px solid #e2e8f0;
         color: #94a3b8;
         width: 32px;
         height: 32px;

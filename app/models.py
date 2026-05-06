@@ -5,21 +5,25 @@ class Location(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     companies = db.relationship('Company', backref='city', lazy=True)
+
 class CompanyScale(db.Model):
     __tablename__ = 'company_scale'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     companies = db.relationship('Company', backref='scale_ref', lazy=True)
+
 class ExperienceOption(db.Model):
     __tablename__ = 'experience_option'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     posts = db.relationship('Post', backref='experience_ref', lazy=True)
+
 class SalaryOption(db.Model):
     __tablename__ = 'salary_option'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     posts = db.relationship('Post', backref='salary_ref', lazy=True)
+
 class Company(db.Model):
     __tablename__ = 'company'
     id = db.Column(db.Integer, primary_key=True)
@@ -35,6 +39,7 @@ class Company(db.Model):
     avatar_url = db.Column(db.String(255))
     business_license = db.Column(db.String(255), nullable=True)
     recruiters = db.relationship('Recruiter', backref='company', lazy=True)
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -59,6 +64,7 @@ class User(db.Model):
         self.password = generate_password_hash(password)
     def check_password(self, password):
         return check_password_hash(self.password, password)
+
 class Recruiter(db.Model):
     __tablename__ = 'recruiter'
     user_id = db.Column(
@@ -74,6 +80,7 @@ class Recruiter(db.Model):
     is_approved = db.Column(db.Boolean, default=False)
     is_company_admin = db.Column(db.Boolean, default=False)
     posts = db.relationship('Post', backref='recruiter', lazy=True)
+
 class CV(db.Model):
     __tablename__ = 'cv'
     id = db.Column(db.Integer, primary_key=True)
@@ -85,11 +92,14 @@ class CV(db.Model):
     title = db.Column(db.String(255))
     summary = db.Column(db.Text)
     education = db.Column(db.Text)
+    skills = db.Column(db.Text)
     experience = db.Column(db.Text)
     cv_url = db.Column(db.String(255))
     cv_content = db.Column(db.Text)
+
     created_at = db.Column(db.DateTime, default=db.func.now())
     last_modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
     applications = db.relationship('Application', backref='cv', lazy=True)
     skills_list = db.relationship('CVSkill', backref='cv', lazy=True, cascade="all, delete-orphan")
 
@@ -152,6 +162,7 @@ class PostSkill(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id', ondelete='CASCADE'), nullable=False)
     skill_name = db.Column(db.String(100), nullable=False)
+
 class PostReport(db.Model):
     __tablename__ = 'post_report'
     id = db.Column(db.Integer, primary_key=True)
@@ -170,6 +181,7 @@ class PostReport(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())
     is_resolved = db.Column(db.Boolean, default=False)
     user = db.relationship('User', backref='reports_sent')
+
 class Application(db.Model):
     __tablename__ = 'application'
     id = db.Column(db.Integer, primary_key=True)
@@ -194,6 +206,7 @@ class Application(db.Model):
         db.UniqueConstraint('cv_id', 'post_id', name='uq_app_cv_post'),
     )
     history = db.relationship('ApplicationStatusHistory', backref='application', lazy=True, cascade="all, delete-orphan")
+
 class ApplicationStatusHistory(db.Model):
     __tablename__ = 'application_status_history'
     id = db.Column(db.Integer, primary_key=True)
@@ -211,6 +224,7 @@ class ApplicationStatusHistory(db.Model):
         nullable=True
     )
     notes = db.Column(db.Text)
+
 class Notification(db.Model):
     __tablename__ = 'notification'
     id = db.Column(db.Integer, primary_key=True)
