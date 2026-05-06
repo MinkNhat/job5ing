@@ -1282,7 +1282,7 @@ input.form-control {
 
 /* VIP/Gold Section & Card Styling - TopCV Style */
 .vip-section {
-    padding: 40px 0;
+    padding-bottom: 40px;
     background-color: #f4f7f6;
     margin-bottom: 20px;
 }
@@ -1319,12 +1319,11 @@ input.form-control {
     border-radius: 12px;
     padding: 20px;
     display: flex;
-    gap: 20px;
+    gap: 16px;
     transition: all 0.3s ease;
     position: relative;
     box-shadow: 0 4px 12px rgba(255, 180, 63, 0.1);
     height: 100%;
-    align-items: center;
     animation: vip-gold-glow 2s infinite ease-in-out;
 }
 
@@ -1341,11 +1340,6 @@ input.form-control {
 }
 
 .job-card.vip-gold .job-card-logo {
-    width: 80px;
-    height: 80px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 5px;
     background: #fff;
     flex-shrink: 0;
 }
