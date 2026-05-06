@@ -98,9 +98,6 @@
         <div class="job-grid">
             {% for job in pinned_posts %}
             <article class="job-card vip-gold" style="position: relative;">
-                <div class="vip-badge">
-                    <i class="fas fa-star"></i> HOT
-                </div>
 
                 {% if current_user and not current_user.is_admin and not current_user.is_employer %}
                 <button class="job-report-btn" title="Báo cáo tin này"
@@ -164,7 +161,8 @@
             {% for job in pagination.items %}
             <article class="job-card" style="position: relative;">
                 {% if job.deadline %}
-                <div class="job-card-deadline" title="Hạn nộp hồ sơ">
+                <div class="job-card-deadline" title="Hạn nộp hồ sơ" 
+                     {% if current_user and not current_user.is_admin and not current_user.is_employer %}style="right: 55px;"{% endif %}>
                     <i class="far fa-clock"></i> {{ job.deadline.strftime('%d/%m/%Y') }}
                 </div>
                 {% endif %}
@@ -310,7 +308,7 @@
 <style>
     .job-report-btn {
         position: absolute;
-        bottom: 12px;
+        top: 12px;
         right: 15px;
         background: rgba(255, 255, 255, 0.8);
         border: 1px solid #e2e8f0;
