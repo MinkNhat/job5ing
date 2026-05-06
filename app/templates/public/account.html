@@ -2,6 +2,10 @@
 
 {% block title %}Job5ing | THÔNG TIN TÀI KHOẢN{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/public/account.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="public-page py-4">
     <div class="container">
@@ -12,12 +16,10 @@
             </ol>
         </nav>
 
-        <h2 class="h3 fw-bold text-uppercase mb-4">Hồ sơ cá nhân</h2>
-
         <div class="row g-4">
             <!-- Sidebar -->
-            <div class="col-lg-4">
-                <div class="content-card mt-0 text-center">
+            <div class="col-lg-3">
+                <div class="content-card mt-0 text-center mb-3">
                     <div class="account-avatar mb-3 mx-auto" style="width: 100px; height: 100px; border-radius: 50%;">
                         {% if user.avatar_url %}
                             <img src="{{ user.avatar_url }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
@@ -36,10 +38,40 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Navigation Menu -->
+                {% if not user.is_employer %}
+                <div class="account-nav">
+                    <div class="nav-item">
+                        <a href="{{ url_for('main.resume_management') }}" class="nav-link">
+                            <i class="far fa-file"></i>
+                            <span>Quản lý CV</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="{{ url_for('main.applied_jobs') }}" class="nav-link">
+                            <i class="fas fa-search"></i>
+                            <span>Việc đã ứng tuyển</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Create CV -->
+                <div class="create-cv-section mt-4">
+                    <div class="create-cv-card">
+                        <img src="{{ url_for('static', filename='images/robot.png') }}" alt="Create CV" class="create-cv-image">
+                        <a href="{{ url_for('main.resume', action='create') }}" class="btn btn-create-cv">
+                            Tạo mới CV với AI ngay!
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+
             </div>
 
             <!-- Form -->
-            <div class="col-lg-8">
+            <div class="col-lg-9">
                 <div class="content-card mt-0">
                     <form method="post" class="row g-3" enctype="multipart/form-data">
                         <div class="col-md-6">
@@ -50,7 +82,7 @@
                             <label class="form-label">Tên</label>
                             <input type="text" name="first_name" class="form-control" value="{{ request.form.get('first_name', user.first_name or '') }}" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-6">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" value="{{ user.email }}" disabled>
                         </div>
@@ -77,32 +109,6 @@
                             <textarea name="address" class="form-control" rows="2">{{ request.form.get('address', user.address or '') }}</textarea>
                         </div>
 
-                        <!-- Professional Info -->
-                        <div class="col-12 mt-4">
-                            <h6 class="fw-bold text-muted text-uppercase small border-bottom pb-2">Thông tin hồ sơ chuyên môn</h6>
-                        </div>
-
-                        {% set cv = user.cvs[0] if user.cvs else None %}
-                        <div class="col-12">
-                            <label class="form-label">Tiêu đề hồ sơ</label>
-                            <input type="text" name="cv_title" class="form-control" placeholder="Ví dụ: Lập trình viên Python" value="{{ request.form.get('cv_title', cv.title if cv else '') }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Giới thiệu ngắn</label>
-                            <textarea name="cv_summary" class="form-control" rows="3">{{ request.form.get('cv_summary', cv.summary if cv else '') }}</textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Học vấn</label>
-                            <textarea name="cv_education" class="form-control" rows="3">{{ request.form.get('cv_education', cv.education if cv else '') }}</textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Kinh nghiệm làm việc</label>
-                            <textarea name="cv_experience" class="form-control" rows="4">{{ request.form.get('cv_experience', cv.experience if cv else '') }}</textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Kỹ năng</label>
-                            <input type="text" name="cv_skills" class="form-control" placeholder="Ví dụ: Python, Flask, SQL" value="{{ request.form.get('cv_skills', cv.skills if cv and cv.skills else '') }}">
-                        </div>
                         <div class="col-12">
                             <label class="form-label">Ảnh đại diện mới</label>
                             <input type="file" name="avatar" class="form-control" accept="image/*">
