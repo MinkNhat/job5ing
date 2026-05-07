@@ -188,3 +188,80 @@
         padding: 20px;
     }
 }
+
+.dynamic-section {
+    margin-bottom: 15px;
+}
+
+.dynamic-item {
+    background: #f8f9fa;
+    border-left: 4px solid #ff9550;
+    position: relative;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dynamic-item .form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.dynamic-item .delete-btn {
+    margin-top: 10px;
+    padding: 0.25rem 0.5rem; 
+    font-size: 0.75rem;
+    color: #dc3545;
+    background-color: white;
+    border: 1px solid #dc3545;
+    border-radius: 4px;
+}
+
+.dynamic-item .delete-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.dynamic-item .edit-btn {
+    margin-top: 10px;
+    padding: 0.25rem 0.5rem; 
+    font-size: 0.75rem;
+    color: #007bff;
+    background-color: white;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+}
+
+.dynamic-item .edit-btn:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.add-item-btn {
+    color: var(--site-primary);
+    border-color: var(--site-primary);
+}
+
+.add-item-btn:hover {
+    background-color: var(--site-primary);
+    border-color: var(--site-primary);
+    color: white;
+}
+
+.item-icon {
+    width: 45px; 
+    height: 45px; 
+    border: 2px solid var(--site-primary); 
+    color: var(--site-primary); 
+    flex-shrink: 0;
+}
