@@ -102,6 +102,8 @@ class CV(db.Model):
 
     applications = db.relationship('Application', backref='cv', lazy=True)
     skills_list = db.relationship('CVSkill', backref='cv', lazy=True, cascade="all, delete-orphan")
+    education_list = db.relationship('CVEducation', backref='cv', lazy=True, cascade="all, delete-orphan")
+    experience_list = db.relationship('CVExperience', backref='cv', lazy=True, cascade="all, delete-orphan")
 
     @property
     def skills(self):
@@ -115,11 +117,93 @@ class CV(db.Model):
             for name in names:
                 self.skills_list.append(CVSkill(skill_name=name))
 
+    @property
+    def education(self):
+        result = []
+        for e in self.education_list:
+            text = f"{e.school or ''}"
+            if e.major:
+                text += f" - {e.major}"
+            if e.start_date:
+                text += f" ({e.start_date.strftime('%m/%Y')}"
+                if e.end_date:
+                    text += f" - {e.end_date.strftime('%m/%Y')}"
+                else:
+                    text += " - Hiện tại"
+                text += ")"
+            result.append(text.strip())
+        return "\n".join(result)
+
+    @property
+    def experience(self):
+        result = []
+        for e in self.experience_list:
+            text = f"{e.job_title or ''}"
+            if e.company_name:
+                text += f" - {e.company_name}"
+            if e.position:
+                text += f" ({e.position})"
+            if e.start_date:
+                text += f" ({e.start_date.strftime('%m/%Y')}"
+                if e.end_date:
+                    text += f" - {e.end_date.strftime('%m/%Y')}"
+                else:
+                    text += " - Hiện tại"
+                text += ")"
+            result.append(text.strip())
+            if e.description:
+                result.append(f"  {e.description}")
+        return "\n".join(result)
+    
+    def get_education_json(self):
+        result = []
+        for e in self.education_list:
+            result.append({
+                "school": e.school or "",
+                "major": e.major or "",
+                "start_date": e.start_date.isoformat() if e.start_date else "",
+                "end_date": e.end_date.isoformat() if e.end_date else ""
+            })
+        return result
+    
+    def get_experience_json(self):
+        result = []
+        for e in self.experience_list:
+            result.append({
+                "job_title": e.job_title or "",
+                "company_name": e.company_name or "",
+                "position": e.position or "",
+                "description": e.description or "",
+                "start_date": e.start_date.isoformat() if e.start_date else "",
+                "end_date": e.end_date.isoformat() if e.end_date else ""
+            })
+        return result
+
 class CVSkill(db.Model):
     __tablename__ = 'cv_skill'
     id = db.Column(db.Integer, primary_key=True)
     cv_id = db.Column(db.Integer, db.ForeignKey('cv.id', ondelete='CASCADE'), nullable=False)
     skill_name = db.Column(db.String(100), nullable=False)
+
+class CVEducation(db.Model):
+    __tablename__ = 'cv_education'
+    id = db.Column(db.Integer, primary_key=True)
+    cv_id = db.Column(db.Integer, db.ForeignKey('cv.id', ondelete='CASCADE'), nullable=False)
+    school = db.Column(db.String(255), nullable=False)
+    major = db.Column(db.String(255))
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)  # NULL = present
+
+class CVExperience(db.Model):
+    __tablename__ = 'cv_experience'
+    id = db.Column(db.Integer, primary_key=True)
+    cv_id = db.Column(db.Integer, db.ForeignKey('cv.id', ondelete='CASCADE'), nullable=False)
+    job_title = db.Column(db.String(255), nullable=False)
+    company_name = db.Column(db.String(255), nullable=False)
+    position = db.Column(db.String(255))
+    description = db.Column(db.Text)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)  # NULL = present
 
 class Post(db.Model):
     __tablename__ = 'post'

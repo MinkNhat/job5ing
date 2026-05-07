@@ -2,7 +2,7 @@ from datetime import datetime, date
 from app import create_app, db
 from app.models import (
     Location, CompanyScale, ExperienceOption, SalaryOption,
-    Company, User, Recruiter, CV, CVSkill, Post, PostSkill,
+    Company, User, Recruiter, CV, CVSkill, CVEducation, CVExperience, Post, PostSkill,
     Application, ApplicationStatusHistory, PostReport, Notification
 )
 
@@ -162,40 +162,66 @@ def seed_data():
 
         cvs = [
             CV(id=1, user_id=7, title='Java Backend Dev', summary='Kỹ sư phần mềm đam mê Backend',
-               education='Đại học KHTN - CNTT', experience='2 năm tại công ty ABC',
                cv_url='aws.s3/cv1.pdf', cv_content='Nội dung text CV 1',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
             CV(id=2, user_id=7, title='Python Backend Dev', summary='Chuyên gia xây dựng API bằng Python',
-               education='Đại học KHTN - CNTT', experience='2 năm kinh nghiệm backend',
                cv_url='aws.s3/cv2.pdf', cv_content='Nội dung text CV 2',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
             CV(id=3, user_id=8, title='ReactJS Frontend', summary='Yêu thích làm đẹp giao diện web',
-               education='Đại học Bách Khoa', experience='1 năm frontend developer',
                cv_url='aws.s3/cv3.pdf', cv_content='Nội dung text CV 3',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
             CV(id=4, user_id=8, title='VueJS Frontend', summary='Cứng tay VueJS và Nuxt',
-               education='Đại học Bách Khoa', experience='1 năm kinh nghiệm UI/UX',
                cv_url='aws.s3/cv4.pdf', cv_content='Nội dung text CV 4',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
             CV(id=5, user_id=9, title='Manual Tester', summary='Cẩn thận, tỉ mỉ, tìm bug nhanh',
-               education='ĐH CNTT', experience='1 năm QA Tester',
                cv_url='aws.s3/cv5.pdf', cv_content='Nội dung text CV 5',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
             CV(id=6, user_id=9, title='Automation Tester', summary='Viết script automation chạy mượt',
-               education='ĐH CNTT', experience='Thực tập sinh Automation',
                cv_url='aws.s3/cv6.pdf', cv_content='Nội dung text CV 6',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
             CV(id=7, user_id=10, title='DevOps Engineer', summary='Tối ưu CI/CD pipeline',
-               education='Đại học FPT', experience='3 năm làm sysadmin/devops',
                cv_url='aws.s3/cv7.pdf', cv_content='Nội dung text CV 7',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
             CV(id=8, user_id=10, title='AWS Cloud Engineer', summary='Chuyên thiết kế hạ tầng Cloud AWS',
-               education='Đại học FPT', experience='3 năm kinh nghiệm Cloud',
                cv_url='aws.s3/cv8.pdf', cv_content='Nội dung text CV 8',
                created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
         ]
         for cv in cvs:
             db.session.add(cv)
+
+        db.session.flush()
+
+        cv_educations = [
+            CVEducation(id=1, cv_id=1, school='Đại học KHTN', major='Công nghệ Thông tin', start_date=date(2018, 9, 1), end_date=date(2022, 6, 30)),
+            CVEducation(id=2, cv_id=2, school='Đại học KHTN', major='Khoa học Máy tính', start_date=date(2018, 9, 1), end_date=date(2022, 6, 30)),
+            CVEducation(id=3, cv_id=3, school='Đại học Bách Khoa', major='Kỹ thuật Phần mềm', start_date=date(2019, 9, 1), end_date=date(2023, 6, 30)),
+            CVEducation(id=4, cv_id=4, school='Đại học Bách Khoa', major='Công nghệ Web', start_date=date(2019, 9, 1), end_date=date(2023, 6, 30)),
+            CVEducation(id=5, cv_id=5, school='Đại học CNTT', major='Kỹ thuật Phần mềm', start_date=date(2020, 9, 1), end_date=date(2024, 6, 30)),
+            CVEducation(id=6, cv_id=6, school='Đại học CNTT', major='Kiểm thử Phần mềm', start_date=date(2020, 9, 1), end_date=date(2024, 6, 30)),
+            CVEducation(id=7, cv_id=7, school='Đại học FPT', major='Hệ thống Thông tin', start_date=date(2017, 9, 1), end_date=date(2021, 6, 30)),
+            CVEducation(id=8, cv_id=8, school='Đại học FPT', major='Cơ sở Dữ liệu', start_date=date(2017, 9, 1), end_date=date(2021, 6, 30)),
+        ]
+        for edu in cv_educations:
+            db.session.add(edu)
+
+        cv_experiences = [
+            CVExperience(id=1, cv_id=1, job_title='Junior Java Developer', company_name='Công ty ABC', position='Lập trình viên', description='Phát triển tính năng backend cho hệ thống quản lý', start_date=date(2022, 7, 1), end_date=date(2023, 6, 30)),
+            CVExperience(id=2, cv_id=1, job_title='Senior Java Developer', company_name='Công ty XYZ', position='Lập trình viên cấp cao', description='Thiết kế kiến trúc hệ thống, code review', start_date=date(2023, 7, 1), end_date=None),
+            CVExperience(id=3, cv_id=2, job_title='Python Developer', company_name='Công ty DEF', position='Lập trình viên', description='Xây dựng API bằng FastAPI, làm việc với PostgreSQL', start_date=date(2022, 7, 1), end_date=date(2024, 6, 30)),
+            CVExperience(id=4, cv_id=2, job_title='Backend Engineer', company_name='Công ty GHI', position='Kỹ sư Backend', description='Phát triển microservices, Docker và K8s', start_date=date(2024, 7, 1), end_date=None),
+            CVExperience(id=5, cv_id=3, job_title='Frontend Developer', company_name='Công ty JKL', position='Lập trình viên Frontend', description='Xây dựng giao diện web bằng ReactJS', start_date=date(2023, 7, 1), end_date=date(2024, 6, 30)),
+            CVExperience(id=6, cv_id=3, job_title='React Developer', company_name='Công ty MNO', position='Lập trình viên', description='Tối ưu hiệu suất ứng dụng, state management', start_date=date(2024, 7, 1), end_date=None),
+            CVExperience(id=7, cv_id=4, job_title='Vue Developer', company_name='Công ty PQR', position='Lập trình viên Frontend', description='Phát triển ứng dụng web với Vue.js và Nuxt', start_date=date(2023, 7, 1), end_date=date(2024, 6, 30)),
+            CVExperience(id=8, cv_id=4, job_title='Full Stack Developer', company_name='Công ty STU', position='Lập trình viên Full Stack', description='Làm việc với Vue frontend và Node.js backend', start_date=date(2024, 7, 1), end_date=None),
+            CVExperience(id=9, cv_id=5, job_title='QA Tester', company_name='Công ty VWX', position='Kiểm thử viên', description='Kiểm thử chức năng, viết test case', start_date=date(2024, 1, 1), end_date=None),
+            CVExperience(id=10, cv_id=6, job_title='Automation Tester', company_name='Công ty YZA', position='QA Automation', description='Viết test automation bằng Selenium, Cypress', start_date=date(2023, 7, 1), end_date=None),
+            CVExperience(id=11, cv_id=7, job_title='DevOps Engineer', company_name='Công ty BCD', position='Kỹ sư DevOps', description='Quản lý CI/CD pipeline, cấu hình Jenkins', start_date=date(2022, 7, 1), end_date=date(2024, 6, 30)),
+            CVExperience(id=12, cv_id=7, job_title='Senior DevOps', company_name='Công ty EFG', position='Lãnh đạo DevOps', description='Kiến trúc hệ thống, Kubernetes cluster', start_date=date(2024, 7, 1), end_date=None),
+            CVExperience(id=13, cv_id=8, job_title='Cloud Engineer', company_name='Công ty HIJ', position='Kỹ sư Cloud', description='Thiết kế hạ tầng AWS, quản lý EC2, S3, RDS', start_date=date(2022, 7, 1), end_date=date(2024, 6, 30)),
+            CVExperience(id=14, cv_id=8, job_title='AWS Solutions Architect', company_name='Công ty KLM', position='Kiến trúc sư', description='Tư vấn giải pháp AWS, tối ưu chi phí cloud', start_date=date(2024, 7, 1), end_date=None),
+        ]
+        for exp in cv_experiences:
+            db.session.add(exp)
 
         db.session.flush()
 
