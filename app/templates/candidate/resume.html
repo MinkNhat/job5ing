@@ -9,20 +9,10 @@
 {% block extra_js %}
     <script src="{{ url_for('static', filename='js/resume.js') }}"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('action') === 'create') {
-                const uploadSection = document.getElementById('upload-section');
-                if (uploadSection) {
-                    uploadSection.scrollIntoView({ behavior: 'smooth' });
-                    // Thêm hiệu ứng highlight nhẹ để người dùng chú ý
-                    uploadSection.style.boxShadow = "0 0 15px rgba(255, 149, 80, 0.5)";
-                    setTimeout(() => {
-                        uploadSection.style.boxShadow = "";
-                    }, 2000);
-                }
-            }
-        });
+        const existingCVData = {
+            education: {{ cv.get_education_json() | tojson }},
+            experience: {{ cv.get_experience_json() | tojson }}
+        };
     </script>
 {% endblock %}
 
@@ -95,25 +85,23 @@
                     </div>
 
                     <div class="cv-field">
-                        <label for="education" class="form-label">Học vấn</label>
-                        <textarea 
-                            id="education" 
-                            name="education" 
-                            class="form-control form-textarea"
-                            rows="4"
-                            placeholder="Bằng cấp, chứng chỉ, khóa học..."
-                        >{{ cv.education or '' }}</textarea>
+                        <label class="form-label">Học vấn</label>
+                        <div id="education-container" class="dynamic-section">
+                            <!-- Dynamic Education Items -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-item-btn" data-target="education">
+                            <i class="fas fa-plus"></i> Thêm học vấn
+                        </button>
                     </div>
 
                     <div class="cv-field">
-                        <label for="experience" class="form-label">Kinh nghiệm làm việc</label>
-                        <textarea 
-                            id="experience" 
-                            name="experience" 
-                            class="form-control form-textarea"
-                            rows="5"
-                            placeholder="Mô tả công việc tại các công ty..."
-                        >{{ cv.experience or '' }}</textarea>
+                        <label class="form-label">Kinh nghiệm làm việc</label>
+                        <div id="experience-container" class="dynamic-section">
+                            <!-- Dynamic Experience Items -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-item-btn" data-target="experience">
+                            <i class="fas fa-plus"></i> Thêm kinh nghiệm
+                        </button>
                     </div>
                     
                     <input type="hidden" name="action" value="{{ request.args.get('action') or '' }}">

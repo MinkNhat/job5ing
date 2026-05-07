@@ -17,7 +17,7 @@ import fitz
 from docx import Document
 
 from app import db
-from app.models import User, CV, CVSkill, Post, PostSkill, PostReport, Recruiter
+from app.models import User, CV, CVSkill, CVEducation, CVExperience, Post, PostSkill, PostReport, Recruiter
 def submit_post_report(user, post_id, reason, description):
     post = db.session.get(Post, post_id)
     if not post:
@@ -394,14 +394,34 @@ def parse_resume_gemini(text, file_obj=None):
             "title": "Vị trí ứng tuyển hoặc chức danh hiện tại",
             "summary": "Tóm tắt về ứng viên (nếu có)",
             "skills": ["kỹ năng 1", "kỹ năng 2", "kỹ năng 3", ...],
-            "experience": "Kinh nghiệm làm việc (tóm tắt)",
-            "education": "Học vấn (tóm tắt)"
+            "experience": [
+                {
+                    "job_title": "Tên công việc",
+                    "company_name": "Tên công ty",
+                    "position": "Cấp bậc",
+                    "description": "Mô tả công việc",
+                    "start_date": "YYYY-MM",
+                    "end_date": "YYYY-MM hoặc null nếu hiện tại"
+                },
+                ...
+            ],
+            "education": [
+                {
+                    "school": "Tên trường/đại học",
+                    "major": "Ngành học",
+                    "start_date": "YYYY-MM",
+                    "end_date": "YYYY-MM hoặc null nếu hiện tại"
+                },
+                ...
+            ]
         }
         
         Lưu ý:
-        - skills PHẢI là một mảng (array) các kỹ năng riêng lẻ
-        - Mỗi kỹ năng nên là một cụm từ ngắn (2-3 từ)
-        - Các trường có thể null nếu không tìm thấy
+        - skills PHẢI là mảng (array) các kỹ năng riêng lẻ, mỗi skill là 2-3 từ
+        - experience và education PHẢI là mảng (array) các object có thông tin chi tiết
+        - start_date, end_date format YYYY-MM (ví dụ: 2023-01) hoặc YYYY (ví dụ: 2023)
+        - end_date có thể null nếu vẫn đang làm việc hoặc còn học
+        - Các trường có thể null hoặc để trống nếu không tìm thấy
         - Trả về CHỈ JSON, không có text khác
         
         CV content:
@@ -435,14 +455,32 @@ def parse_resume_gemini(text, file_obj=None):
                     cv_data["skills"] = []
             else:
                 cv_data["skills"] = []
+            
+            # Ensure experience is a list of dicts
+            if "experience" in cv_data and cv_data["experience"]:
+                if isinstance(cv_data["experience"], str):
+                    cv_data["experience"] = []
+                elif not isinstance(cv_data["experience"], list):
+                    cv_data["experience"] = []
+            else:
+                cv_data["experience"] = []
+            
+            # Ensure education is a list of dicts
+            if "education" in cv_data and cv_data["education"]:
+                if isinstance(cv_data["education"], str):
+                    cv_data["education"] = []
+                elif not isinstance(cv_data["education"], list):
+                    cv_data["education"] = []
+            else:
+                cv_data["education"] = []
                 
         except json.JSONDecodeError:
             cv_data = {
                 "title": None,
                 "summary": None,
                 "skills": [],
-                "experience": None,
-                "education": None
+                "experience": [],
+                "education": []
             }
         return True, cv_data, None
     except Exception as e:
@@ -492,6 +530,45 @@ def preview_resume(files=None):
         return False, None, None, str(e)
 
 
+def parse_date_string(date_str):
+    if not date_str or not date_str.strip():
+        return None
+    try:
+        date_str = date_str.strip()
+        if len(date_str) == 7 and date_str[4] == '-':
+            return datetime.strptime(date_str, "%Y-%m").date()
+        elif len(date_str) == 4:
+            return datetime.strptime(date_str, "%Y").date()
+        else:
+            return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, AttributeError):
+        return None
+
+
+def extract_indexed_items(form_data, prefix, fields_config, primary_field):
+    items = []
+    idx = 0
+    
+    while True:
+        primary_value = (form_data.get(f"{prefix}{primary_field}_{idx}") or "").strip()
+        if not primary_value:
+            break
+        
+        item = {}
+        for field_name, field_type in fields_config.items():
+            value = (form_data.get(f"{prefix}{field_name}_{idx}") or "").strip()
+            if field_type == "date":
+                item[field_name] = parse_date_string(value)
+            elif field_type == "optional":
+                item[field_name] = value or None
+            else:
+                item[field_name] = value or None
+        
+        items.append(item)
+        idx += 1
+    return items
+
+
 def save_resume(user, form_data):
     try:
         cv_id = form_data.get("cv_id")
@@ -513,15 +590,11 @@ def save_resume(user, form_data):
 
         cv.title = (form_data.get("title") or "").strip() or None
         cv.summary = (form_data.get("summary") or "").strip() or None
-        cv.education = (form_data.get("education") or "").strip() or None
-        cv.experience = (form_data.get("experience") or "").strip() or None
         if form_data.get("cv_url"):
             cv.cv_url = form_data.get("cv_url")
 
+        # Handle skills
         cv_skills_str = (form_data.get("skills") or "").strip()
-        db.session.flush()
-
-        # Clear old skills and add new ones
         CVSkill.query.filter_by(cv_id=cv.id).delete()
         
         skills_list = []
@@ -531,13 +604,68 @@ def save_resume(user, form_data):
                 new_skill = CVSkill(cv_id=cv.id, skill_name=skill_name)
                 db.session.add(new_skill)
                 skills_list.append(skill_name)
+        
+        # Handle education
+        CVEducation.query.filter_by(cv_id=cv.id).delete()
+        education_items = extract_indexed_items(
+            form_data,
+            "education_",
+            {"school": "text", "major": "optional", "start": "date", "end": "date"},
+            "school"
+        )
+        education_list = []
+        for item in education_items:
+            edu = CVEducation(
+                cv_id=cv.id,
+                school=item["school"],
+                major=item["major"],
+                start_date=item["start"],
+                end_date=item["end"]
+            )
+            db.session.add(edu)
+            education_list.append({
+                "school": item["school"],
+                "major": item["major"],
+                "start_date": item["start"].isoformat() if item["start"] else None,
+                "end_date": item["end"].isoformat() if item["end"] else None
+            })
+        
+        # Handle experience
+        CVExperience.query.filter_by(cv_id=cv.id).delete()
+        experience_items = extract_indexed_items(
+            form_data,
+            "exp_",
+            {"job_title": "text", "company": "optional", "position": "optional", "description": "optional", "start": "date", "end": "date"},
+            "job_title"
+        )
+        experience_list = []
+        for item in experience_items:
+            exp = CVExperience(
+                cv_id=cv.id,
+                job_title=item["job_title"],
+                company_name=item["company"],
+                position=item["position"],
+                description=item["description"],
+                start_date=item["start"],
+                end_date=item["end"]
+            )
+            db.session.add(exp)
+            experience_list.append({
+                "job_title": item["job_title"],
+                "company_name": item["company"],
+                "position": item["position"],
+                "description": item["description"],
+                "start_date": item["start"].isoformat() if item["start"] else None,
+                "end_date": item["end"].isoformat() if item["end"] else None
+            })
 
+        # Build cv_content JSON
         cv_content = {
             "title": cv.title,
             "summary": cv.summary,
             "skills": skills_list,
-            "experience": cv.experience,
-            "education": cv.education
+            "experience": experience_list,
+            "education": education_list
         }
         cv.cv_content = json.dumps(cv_content, ensure_ascii=False)
         db.session.add(cv)
