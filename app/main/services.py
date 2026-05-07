@@ -387,7 +387,26 @@ def extract_text_from_file(file_obj, file_ext):
 def parse_resume_gemini(text, file_obj=None):
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
-        prompt =  + (text or "")
+        
+        prompt = """Hãy phân tích CV/Resume này và trích xuất thông tin dưới đây.
+        Trả về kết quả dưới dạng JSON với cấu trúc sau:
+        {
+            "title": "Vị trí ứng tuyển hoặc chức danh hiện tại",
+            "summary": "Tóm tắt về ứng viên (nếu có)",
+            "skills": ["kỹ năng 1", "kỹ năng 2", "kỹ năng 3", ...],
+            "experience": "Kinh nghiệm làm việc (tóm tắt)",
+            "education": "Học vấn (tóm tắt)"
+        }
+        
+        Lưu ý:
+        - skills PHẢI là một mảng (array) các kỹ năng riêng lẻ
+        - Mỗi kỹ năng nên là một cụm từ ngắn (2-3 từ)
+        - Các trường có thể null nếu không tìm thấy
+        - Trả về CHỈ JSON, không có text khác
+        
+        CV content:
+        """ + (text or "")
+        
         if text:
             response = model.generate_content(prompt)
         else:
@@ -407,11 +426,21 @@ def parse_resume_gemini(text, file_obj=None):
                 cv_data = json.loads(json_str)
             else:
                 cv_data = json.loads(response_text)
+            
+            # Ensure skills is a list
+            if "skills" in cv_data and cv_data["skills"]:
+                if isinstance(cv_data["skills"], str):
+                    cv_data["skills"] = [s.strip() for s in cv_data["skills"].split(',') if s.strip()]
+                elif not isinstance(cv_data["skills"], list):
+                    cv_data["skills"] = []
+            else:
+                cv_data["skills"] = []
+                
         except json.JSONDecodeError:
             cv_data = {
                 "title": None,
                 "summary": None,
-                "skills": None,
+                "skills": [],
                 "experience": None,
                 "education": None
             }
@@ -492,16 +521,21 @@ def save_resume(user, form_data):
         cv_skills_str = (form_data.get("skills") or "").strip()
         db.session.flush()
 
+        # Clear old skills and add new ones
+        CVSkill.query.filter_by(cv_id=cv.id).delete()
+        
         skills_list = []
         if cv_skills_str:
-            for skill_name in [s.strip() for s in cv_skills_str.split(',') if s.strip()]:
-                db.session.add(CVSkill(cv_id=cv.id, skill_name=skill_name))
+            skill_names = [s.strip() for s in cv_skills_str.split(',') if s.strip()]
+            for skill_name in skill_names:
+                new_skill = CVSkill(cv_id=cv.id, skill_name=skill_name)
+                db.session.add(new_skill)
                 skills_list.append(skill_name)
 
         cv_content = {
             "title": cv.title,
             "summary": cv.summary,
-            "skills": ", ".join(skills_list),
+            "skills": skills_list,
             "experience": cv.experience,
             "education": cv.education
         }
