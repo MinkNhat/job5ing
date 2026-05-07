@@ -512,6 +512,13 @@ def preview_resume_endpoint():
         if not is_valid:
             return jsonify({"success": False, "message": error_message}), 400
 
+        # Convert skills list to comma-separated string
+        skills_data = cv_data.get("skills") or []
+        if isinstance(skills_data, list):
+            skills_str = ", ".join([s for s in skills_data if s])
+        else:
+            skills_str = str(skills_data)
+
         return jsonify({
             "success": True,
             "message": "Preview CV thành công",
@@ -519,7 +526,7 @@ def preview_resume_endpoint():
             "cv_data": {
                 "title": cv_data.get("title") or "",
                 "summary": cv_data.get("summary") or "",
-                "skills": cv_data.get("skills") or "",
+                "skills": skills_str,
                 "experience": cv_data.get("experience") or "",
                 "education": cv_data.get("education") or ""
             }

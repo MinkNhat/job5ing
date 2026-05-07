@@ -151,7 +151,7 @@ def update_account_profile(user, form_data, files=None):
         return False, error_message
 
     phone = (form_data.get("phone") or "").strip()
-    avatar_url = (form_data.get("avatar_url") or "").strip()
+    avatar_url = None
 
     if phone:
         is_valid, error_message = validate_phone(phone)
@@ -181,21 +181,11 @@ def update_account_profile(user, form_data, files=None):
     user.phone = phone or None
     user.address = (form_data.get("address") or "").strip() or None
     user.sex = (form_data.get("sex") or "").strip() or None
-    user.avatar_url = avatar_url or None
+
+    if avatar_url:
+        user.avatar_url = avatar_url
     user.date_of_birth = date_of_birth
-    cv = CV.query.filter_by(user_id=user.id).first()
-    if not cv:
-        cv = CV(user_id=user.id)
-        db.session.add(cv)
 
-    cv.title = (form_data.get("cv_title") or "").strip() or None
-    cv.summary = (form_data.get("cv_summary") or "").strip() or None
-    cv.education = (form_data.get("cv_education") or "").strip() or None
-
-    # Handle skills relationship
-    cv.skills = (form_data.get("cv_skills") or "").strip()
-
-    cv.experience = (form_data.get("cv_experience") or "").strip() or None
     try:
         db.session.commit()
         sync_authenticated_session(user)
@@ -397,7 +387,26 @@ def extract_text_from_file(file_obj, file_ext):
 def parse_resume_gemini(text, file_obj=None):
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
-        prompt =  + (text or "")
+        
+        prompt = """Hãy phân tích CV/Resume này và trích xuất thông tin dưới đây.
+        Trả về kết quả dưới dạng JSON với cấu trúc sau:
+        {
+            "title": "Vị trí ứng tuyển hoặc chức danh hiện tại",
+            "summary": "Tóm tắt về ứng viên (nếu có)",
+            "skills": ["kỹ năng 1", "kỹ năng 2", "kỹ năng 3", ...],
+            "experience": "Kinh nghiệm làm việc (tóm tắt)",
+            "education": "Học vấn (tóm tắt)"
+        }
+        
+        Lưu ý:
+        - skills PHẢI là một mảng (array) các kỹ năng riêng lẻ
+        - Mỗi kỹ năng nên là một cụm từ ngắn (2-3 từ)
+        - Các trường có thể null nếu không tìm thấy
+        - Trả về CHỈ JSON, không có text khác
+        
+        CV content:
+        """ + (text or "")
+        
         if text:
             response = model.generate_content(prompt)
         else:
@@ -417,11 +426,21 @@ def parse_resume_gemini(text, file_obj=None):
                 cv_data = json.loads(json_str)
             else:
                 cv_data = json.loads(response_text)
+            
+            # Ensure skills is a list
+            if "skills" in cv_data and cv_data["skills"]:
+                if isinstance(cv_data["skills"], str):
+                    cv_data["skills"] = [s.strip() for s in cv_data["skills"].split(',') if s.strip()]
+                elif not isinstance(cv_data["skills"], list):
+                    cv_data["skills"] = []
+            else:
+                cv_data["skills"] = []
+                
         except json.JSONDecodeError:
             cv_data = {
                 "title": None,
                 "summary": None,
-                "skills": None,
+                "skills": [],
                 "experience": None,
                 "education": None
             }
@@ -480,6 +499,8 @@ def save_resume(user, form_data):
         
         if action == "create":
             cv = CV(user_id=user.id)
+            db.session.add(cv)
+            db.session.flush()
         elif cv_id:
             cv = CV.query.filter_by(id=cv_id, user_id=user.id).first()
         else:
@@ -492,20 +513,29 @@ def save_resume(user, form_data):
 
         cv.title = (form_data.get("title") or "").strip() or None
         cv.summary = (form_data.get("summary") or "").strip() or None
-
-        # Handle skills relationship
-        cv.skills = (form_data.get("skills") or "").strip()
-
         cv.education = (form_data.get("education") or "").strip() or None
         cv.experience = (form_data.get("experience") or "").strip() or None
         if form_data.get("cv_url"):
             cv.cv_url = form_data.get("cv_url")
 
-        # Get skill names as string for cv_content
+        cv_skills_str = (form_data.get("skills") or "").strip()
+        db.session.flush()
+
+        # Clear old skills and add new ones
+        CVSkill.query.filter_by(cv_id=cv.id).delete()
+        
+        skills_list = []
+        if cv_skills_str:
+            skill_names = [s.strip() for s in cv_skills_str.split(',') if s.strip()]
+            for skill_name in skill_names:
+                new_skill = CVSkill(cv_id=cv.id, skill_name=skill_name)
+                db.session.add(new_skill)
+                skills_list.append(skill_name)
+
         cv_content = {
             "title": cv.title,
             "summary": cv.summary,
-            "skills": cv.skills,
+            "skills": skills_list,
             "experience": cv.experience,
             "education": cv.education
         }
