@@ -59,7 +59,10 @@ def approve_member(recruiter_id, company_id):
 def delete_member(recruiter_id, company_id):
     recruiter = db.session.get(Recruiter, recruiter_id)
     if recruiter and recruiter.company_id == company_id:
+        user = recruiter.user
         db.session.delete(recruiter)
+        if user:
+            user.is_employer = False
         db.session.commit()
         return True
     return False

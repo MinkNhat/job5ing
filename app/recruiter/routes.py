@@ -3,7 +3,7 @@ from app.models import (
     User, Post, PostSkill, Recruiter, Application, Company, db,
     ExperienceOption, SalaryOption, CompanyScale, Location
 )
-from app.main.services import require_logged_in_user
+from app.main.services import require_logged_in_user, sync_authenticated_session
 from sqlalchemy import func
 from datetime import datetime
 from .service import (
@@ -298,6 +298,9 @@ def delete_company_member(user_id):
     if delete_member(user_id, recruiter.company_id):
         flash("Đã xóa thành viên khỏi công ty.", "success")
         if user_id == recruiter.user_id:
+            user = db.session.get(User, user_id)
+            if user:
+                sync_authenticated_session(user)
             return redirect(url_for("main.index"))
     else:
         flash("Không thể xóa thành viên này.", "danger")
