@@ -628,14 +628,18 @@ def post_details(post_id):
 
     has_applied = False
     cv = None
+    all_cvs = []
     if 'user_id' in session:
         user = db.session.get(User, session['user_id'])
         if user and not user.is_employer:
-            cv = CV.query.filter_by(user_id=user.id).first()
-            if cv:
-                has_applied = Application.query.filter_by(cv_id=cv.id, post_id=post.id).first() is not None
+            all_cvs = CV.query.filter_by(user_id=user.id).all()
+            if all_cvs:
+                cv = all_cvs[0]
+                # Check if applied with ANY cv
+                cv_ids = [c.id for c in all_cvs]
+                has_applied = Application.query.filter(Application.cv_id.in_(cv_ids), Application.post_id == post.id).first() is not None
 
-    return render_template("public/post_details.html", post=post, related_posts=related_posts, has_applied=has_applied, cv=cv)
+    return render_template("public/post_details.html", post=post, related_posts=related_posts, has_applied=has_applied, cv=cv, all_cvs=all_cvs)
 
 @main_bp.route("/post/<int:post_id>/apply", methods=["POST"])
 def apply_job(post_id):
@@ -651,7 +655,9 @@ def apply_job(post_id):
     if new_phone and new_phone != user.phone:
         user.phone = new_phone
     
-    cv = get_user_cv(user)
+    cv_id = request.form.get("cv_id")
+    cv = None
+    
     if 'new_cv' in request.files and request.files['new_cv'].filename != '':
         new_cv_file = request.files['new_cv']
         ext = ("." + new_cv_file.filename.rsplit(".", 1)[1].lower()) if "." in new_cv_file.filename else ""
@@ -663,18 +669,31 @@ def apply_job(post_id):
                     folder="job5ing/resumes",
                     resource_type="auto"
                 )
-                cv.cv_url = upload_result.get("secure_url")
-                cv.title = new_cv_file.filename
+                # Create a NEW CV record for the upload
+                cv = CV(
+                    user_id=user.id,
+                    title=new_cv_file.filename,
+                    cv_url=upload_result.get("secure_url")
+                )
+                db.session.add(cv)
+                db.session.flush()
             except Exception as e:
                 flash(f"Lỗi khi tải CV lên: {str(e)}", "danger")
                 return redirect(url_for("main.post_details", post_id=post_id))
+    elif cv_id and cv_id != 'new':
+        cv = CV.query.filter_by(id=cv_id, user_id=user.id).first()
+    
+    if not cv:
+        # Fallback to the first CV if nothing else was chosen/uploaded correctly
+        cv = CV.query.filter_by(user_id=user.id).first()
 
     if not cv or (not cv.cv_url and not cv.cv_content):
         flash("Vui lòng cập nhật hồ sơ CV (tải lên file hoặc điền thông tin) trước khi ứng tuyển.", "warning")
         return redirect(url_for("main.resume"))
+        
     existing_app = Application.query.filter_by(cv_id=cv.id, post_id=post.id).first()
     if existing_app:
-        flash("Bạn đã ứng tuyển vào vị trí này rồi.", "info")
+        flash("Bạn đã ứng tuyển vào vị trí này bằng CV này rồi.", "info")
         return redirect(url_for("main.post_details", post_id=post_id))
         
     cover_letter = request.form.get("cover_letter")
@@ -708,13 +727,17 @@ def applied_jobs():
     user = require_logged_in_user()
     if not user:
         return redirect(url_for("main.login", next=request.url))
-    cv = CV.query.filter_by(user_id=user.id).first()
+    
+    cv_ids = [c.id for c in CV.query.filter_by(user_id=user.id).all()]
     
     q = request.args.get('q', '').strip()
     status_filter = request.args.get('status', '').upper()
     page = request.args.get("page", 1, type=int)
 
-    query = Application.query.filter_by(cv_id=cv.id) if cv else Application.query.filter_by(id=-1)
+    if cv_ids:
+        query = Application.query.filter(Application.cv_id.in_(cv_ids))
+    else:
+        query = Application.query.filter_by(id=-1)
     
     if q:
         query = query.join(Post).filter(Post.title.ilike(f'%{q}%'))

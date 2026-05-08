@@ -312,6 +312,14 @@ input.form-control {
     max-height: 90vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+.custom-modal-content form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .custom-modal-overlay.hidden .custom-modal-content {
@@ -319,6 +327,7 @@ input.form-control {
 }
 
 .modal-header {
+    flex-shrink: 0;
     padding: 20px 24px;
     border-bottom: 1px solid rgba(188, 205, 224, 0.4);
     display: flex;
@@ -349,6 +358,7 @@ input.form-control {
 .modal-body {
     padding: 24px;
     overflow-y: auto;
+    flex: 1;
 }
 
 .form-grid-2 {
@@ -374,6 +384,7 @@ input.form-control {
 }
 
 .modal-footer {
+    flex-shrink: 0;
     padding: 16px 24px;
     border-top: 1px solid rgba(188, 205, 224, 0.4);
     display: flex;

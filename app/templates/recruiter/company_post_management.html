@@ -176,18 +176,18 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">Mức lương</label>
-                        <select name="salary" id="jobSalary" class="form-select">
+                        <select name="salary" id="m_salary" class="form-select">
                             <option value="">Thỏa thuận</option>
-                            {% for opt in all_salaries %}
+                            {% for opt in salary_options %}
                             <option value="{{ opt.id }}">{{ opt.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">Kinh nghiệm</label>
-                        <select name="experience" id="jobExperience" class="form-select">
+                        <select name="experience" id="m_exp" class="form-select">
                             <option value="">Không yêu cầu</option>
-                            {% for opt in all_experiences %}
+                            {% for opt in experience_options %}
                             <option value="{{ opt.id }}">{{ opt.name }}</option>
                             {% endfor %}
                         </select>

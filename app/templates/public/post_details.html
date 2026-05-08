@@ -169,18 +169,26 @@
                             <div class="mb-4">
                                 <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-3">Chọn CV để ứng tuyển</label>
                                 
-                                {% if cv and (cv.cv_url or cv.cv_content) %}
-                                <div class="form-check p-3 border rounded-3 mb-3 d-flex align-items-center" style="cursor: pointer; background-color: #fff;">
-                                    <input class="form-check-input ms-0 me-3" type="radio" name="cv_type" id="cvExisting" value="existing" checked>
-                                    <label class="form-check-label w-100 d-flex align-items-center" for="cvExisting" style="cursor: pointer;">
-                                        <i class="far fa-file-pdf fa-2x text-danger me-3"></i>
-                                        <div>
-                                            <div class="fw-bold text-dark">{{ cv.title or 'CV hiện tại' }}</div>
-                                            <div class="text-muted small">Dùng hồ sơ đã lưu trên Job5ing</div>
+                                <div id="cv-list">
+                                    {% for user_cv in all_cvs %}
+                                        {% if user_cv.cv_url or user_cv.cv_content %}
+                                        <div class="form-check p-3 border rounded-3 mb-3 d-flex align-items-center cv-option" style="cursor: pointer; background-color: #fff;">
+                                            <input class="form-check-input ms-0 me-3" type="radio" name="cv_id" id="cv_{{ user_cv.id }}" value="{{ user_cv.id }}" {% if loop.first %}checked{% endif %}>
+                                            <label class="form-check-label w-100 d-flex align-items-center" for="cv_{{ user_cv.id }}" style="cursor: pointer;">
+                                                <i class="far fa-file-pdf fa-2x text-danger me-3"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark">{{ user_cv.title or 'Hồ sơ trực tuyến' }}</div>
+                                                    <div class="text-muted small">Cập nhật lúc: {{ user_cv.last_modified.strftime('%d/%m/%Y') }}</div>
+                                                </div>
+                                            </label>
                                         </div>
-                                    </label>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="alert alert-info py-2 small">
+                                            <i class="fas fa-info-circle me-1"></i> Bạn chưa có CV nào trên hệ thống. Hãy tải lên CV mới bên dưới.
+                                        </div>
+                                    {% endfor %}
                                 </div>
-                                {% endif %}
 
                                 <div class="cv-upload-box border rounded-3 p-4 text-center" style="border-style: dashed !important; border-width: 2px !important; background-color: #fcfcfc;">
                                     <input type="file" name="new_cv" id="new_cv" class="d-none" accept=".pdf,.doc,.docx">
@@ -221,22 +229,23 @@
                 if (fileName) {
                     display.textContent = 'Đã chọn: ' + fileName;
                     display.classList.remove('d-none');
-                    // Nếu tải CV mới thì uncheck cái radio cũ (nếu có)
-                    const radio = document.getElementById('cvExisting');
-                    if (radio) radio.checked = false;
+                    // Uncheck all existing CV radios
+                    document.querySelectorAll('input[name="cv_id"]').forEach(radio => {
+                        radio.checked = false;
+                    });
                 } else {
                     display.classList.add('d-none');
                 }
             });
             
-            {% if cv %}
-            document.getElementById('cvExisting').addEventListener('change', function(e) {
-                if (this.checked) {
-                    document.getElementById('new_cv').value = '';
-                    document.getElementById('file-name-display').classList.add('d-none');
-                }
+            document.querySelectorAll('input[name="cv_id"]').forEach(radio => {
+                radio.addEventListener('change', function(e) {
+                    if (this.checked) {
+                        document.getElementById('new_cv').value = '';
+                        document.getElementById('file-name-display').classList.add('d-none');
+                    }
+                });
             });
-            {% endif %}
         </script>
 
         <div class="job-content-grid">
