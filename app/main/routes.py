@@ -133,19 +133,29 @@ def recruiter_request():
     user = require_logged_in_user()
     if not user:
         return redirect(url_for("main.login", next=url_for("main.recruiter_request", **request.args)))
-    
-    if user.is_employer:
-        # If already an employer, maybe they want to post a job
-        if request.args.get("action") == "post_job":
-            return redirect(url_for("main.switch_mode", mode="company", action="post_job"))
-        return redirect(url_for("recruiter.dashboard"))
 
-    # Nếu là ứng viên chưa đăng ký employer
-    flash("Hãy đăng ký trở thành nhà tuyển dụng để mở khóa tính năng này.", "info")
+    if user.is_employer:
+        recruiter = Recruiter.query.get(user.id)
+        if recruiter:
+            company = Company.query.get(recruiter.company_id)
+            if recruiter.is_approved and company and company.is_approved:
+                if request.args.get("action") == "post_job":
+                    return redirect(url_for("main.switch_mode", mode="company", action="post_job"))
+                return redirect(url_for("recruiter.dashboard"))
+        # If not fully approved (either recruiter or company), they can stay here to change info
+
+    # Nếu là ứng viên chưa đăng ký employer hoặc recruiter/company chưa được duyệt
+    if not user.is_employer:
+        flash("Hãy đăng ký trở thành nhà tuyển dụng để mở khóa tính năng này.", "info")
 
     companies = Company.query.all()
+    recruiter = Recruiter.query.get(user.id) if user.is_employer else None
     return render_template("auth/recruiter_request.html",
-                           companies=companies)
+                           companies=companies,
+                           recruiter=recruiter,
+                           all_locations=Location.query.all(),
+                           all_scales=CompanyScale.query.all())
+
 @main_bp.route("/submit-join-request", methods=["POST"])
 def submit_join_request():
     user = require_logged_in_user()
@@ -153,26 +163,53 @@ def submit_join_request():
         return redirect(url_for("main.login", next=request.url))
     company_id = request.form.get("company_id")
     position = request.form.get("position")
-    
+
     if not company_id or not position:
         flash("Vui lòng điền đầy đủ thông tin.", "danger")
         return redirect(url_for("main.recruiter_request"))
-    
-    # Tạo recruiter mới
-    recruiter = Recruiter(
-        user_id=user.id,
-        company_id=company_id,
-        position=position,
-        is_approved=False,
-        is_company_admin=False
-    )
-    
-    try:
+
+    recruiter = Recruiter.query.get(user.id)
+    if recruiter:
+        company = Company.query.get(recruiter.company_id)
+        if recruiter.is_approved and company and company.is_approved:
+            flash("Tài khoản của bạn đã được duyệt, không thể thay đổi thông tin yêu cầu.", "warning")
+            return redirect(url_for("recruiter.dashboard"))
+
+        # Xử lý database cho hợp lý: Nếu đổi từ cty đang chờ duyệt sang cty khác
+        old_company_id = recruiter.company_id
+
+        # Cập nhật thông tin yêu cầu
+        recruiter.company_id = company_id
+        recruiter.position = position
+        recruiter.is_approved = False # Phải đợi cty mới duyệt lại
+        recruiter.is_company_admin = False
+
+        # Cleanup: Nếu cty cũ chưa được duyệt và không còn ai khác, có thể xóa cty cũ
+        if old_company_id and old_company_id != int(company_id):
+            old_company = Company.query.get(old_company_id)
+            if old_company and not old_company.is_approved:
+                other_recruiters = Recruiter.query.filter_by(company_id=old_company_id).filter(Recruiter.user_id != user.id).count()
+                if other_recruiters == 0:
+                    db.session.delete(old_company)
+
+        msg = "Cập nhật yêu cầu gia nhập thành công. Vui lòng chờ phê duyệt từ công ty mới."
+    else:
+        # Tạo recruiter mới
+        recruiter = Recruiter(
+            user_id=user.id,
+            company_id=company_id,
+            position=position,
+            is_approved=False,
+            is_company_admin=False
+        )
         db.session.add(recruiter)
+        msg = "Yêu cầu của bạn đã được gửi đi, vui lòng chờ admin của công ty phê duyệt."
+
+    try:
         user.is_employer = True
         db.session.commit()
         session["user_role"] = "employer"
-        flash("Yêu cầu của bạn đã được gửi đi, vui lòng chờ admin của công ty phê duyệt.", "success")
+        flash(msg, "success")
         return redirect(url_for("main.index"))
     except SQLAlchemyError:
         db.session.rollback()
@@ -186,8 +223,21 @@ def register_company():
         return redirect(url_for("main.login", next=request.url))
     existing_recruiter = Recruiter.query.get(user.id)
     if existing_recruiter:
+        company = Company.query.get(existing_recruiter.company_id)
+        if existing_recruiter.is_approved and company and company.is_approved:
+            flash("Tài khoản của bạn đã được duyệt, không thể thay đổi thông tin yêu cầu.", "warning")
+            return redirect(url_for("recruiter.dashboard"))
+        
+        # Cleanup: Nếu cty cũ chưa được duyệt và không còn ai khác, có thể xóa cty cũ
+        old_company_id = existing_recruiter.company_id
         try:
             db.session.delete(existing_recruiter)
+            if old_company_id:
+                old_company = Company.query.get(old_company_id)
+                if old_company and not old_company.is_approved:
+                    other_recruiters = Recruiter.query.filter_by(company_id=old_company_id).filter(Recruiter.user_id != user.id).count()
+                    if other_recruiters == 0:
+                        db.session.delete(old_company)
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()

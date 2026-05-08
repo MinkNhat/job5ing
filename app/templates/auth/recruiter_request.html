@@ -21,20 +21,20 @@
                     <div class="form-group">
                         <label>Chọn công ty trực thuộc <span class="text-danger">*</span></label>
                         <select name="company_id" class="form-control" required style="cursor: pointer;">
-                            <option value="" disabled selected>Tìm và chọn công ty</option>
+                            <option value="" disabled {% if not recruiter %}selected{% endif %}>Tìm và chọn công ty</option>
                             {% for company in companies %}
-                                <option value="{{ company.id }}">{{ company.name }}</option>
+                                <option value="{{ company.id }}" {% if recruiter and recruiter.company_id == company.id %}selected{% endif %}>{{ company.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label>Nhập chức vụ của bạn <span class="text-danger">*</span></label>
-                        <input type="text" name="position" class="form-control" placeholder="VD: Trưởng phòng nhân sự" required>
+                        <input type="text" name="position" class="form-control" placeholder="VD: Trưởng phòng nhân sự" value="{{ recruiter.position if recruiter else '' }}" required>
                     </div>
 
                     <button type="submit" class="auth-centered-submit" style="margin-top: 10px;">
-                        Gửi yêu cầu gia nhập
+                        {{ 'Cập nhật yêu cầu gia nhập' if recruiter else 'Gửi yêu cầu gia nhập' }}
                     </button>
                 </form>
 
