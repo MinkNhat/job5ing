@@ -23,6 +23,7 @@ from .services import (
     save_resume,
     validate_tax_code,
     submit_post_report,
+    delete_cv
 )
 from app.models import (
     Company, Post, Recruiter, User, Application, Notification, CV,
@@ -765,3 +766,13 @@ def resume_management():
     pagination = query.order_by(CV.last_modified.desc()).paginate(page=page, per_page=10, error_out=False)
     
     return render_template("candidate/resume_management.html", pagination=pagination)
+
+@main_bp.route("/resume/delete/<int:cv_id>", methods=["POST"])
+def delete_cv_route(cv_id):
+    user = require_logged_in_user()
+    if not user:
+        return redirect(url_for("main.login", next=request.url))
+    
+    success, message = delete_cv(cv_id, user.id)
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("main.resume_management"))

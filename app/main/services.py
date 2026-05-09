@@ -774,4 +774,17 @@ def save_resume(user, form_data):
         return True, "Lưu CV thành công"
     except Exception as e:
         db.session.rollback()
-        return False, f"Lỗi: {str(e)}"
+        return False, f"Lỗi hệ thống: {str(e)}"
+
+def delete_cv(cv_id, user_id):
+    try:
+        cv = CV.query.filter_by(id=cv_id, user_id=user_id).first()
+        if not cv:
+            return False, "Hồ sơ không tồn tại hoặc bạn không có quyền xóa."
+        
+        db.session.delete(cv)
+        db.session.commit()
+        return True, "Xóa hồ sơ thành công."
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Lỗi khi xóa hồ sơ: {str(e)}"
