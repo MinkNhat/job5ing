@@ -128,6 +128,7 @@ def sync_authenticated_session(user):
     session["user_name"] = get_display_name(user)
     session["user_role"] = "employer" if user.is_employer else "candidate"
     session.permanent = True
+    session.modified = True
 
 
 def parse_date_input(raw_value):
@@ -494,6 +495,106 @@ def get_user_cv(user):
         db.session.add(cv)
         db.session.commit()
     return cv
+
+
+def get_recommended_jobs(user_id):
+    from app.main.recruiter_services import calculate_ai_score
+    user = db.session.get(User, user_id)
+    if not user or user.is_employer or user.is_admin:
+        return []
+    
+    cv = CV.query.filter_by(user_id=user_id).first()
+    if not cv:
+        return []
+
+    # Lấy danh sách các tin tuyển dụng đang hoạt động (ACTIVE hoặc PINNED)
+    active_posts = Post.query.filter(Post.status.in_(['ACTIVE', 'PINNED'])).all()
+    
+    scored_posts = []
+    for post in active_posts:
+        score = calculate_ai_score(cv.id, post.id)
+        if score > 0:
+            scored_posts.append({
+                'post': post,
+                'score': score
+            })
+    
+    # Sắp xếp theo điểm số AI giảm dần
+    scored_posts.sort(key=lambda x: x['score'], reverse=True)
+    
+    # Trả về top 8 việc làm phù hợp nhất
+    return scored_posts[:8]
+
+
+def send_daily_job_recommendations():
+    from services.smtp_service import send_email
+    from flask import url_for
+    
+    # Lấy tất cả người dùng là ứng viên (không phải employer, không phải admin)
+    candidates = User.query.filter_by(is_employer=False, is_admin=False, is_active=True).all()
+    
+    for user in candidates:
+        recommendations = get_recommended_jobs(user.id)
+        if not recommendations:
+            continue
+            
+        subject = f"[Job5ing] Gợi ý việc làm phù hợp cho bạn ngày {datetime.now().strftime('%d/%m/%Y')}"
+        
+        job_list_html = ""
+        for item in recommendations:
+            job = item['post']
+            company_name = job.recruiter.company.name
+            job_url = url_for('main.post_details', post_id=job.id, _external=True)
+            
+            job_list_html += f"""
+            <div style="border-bottom: 1px solid #eee; padding: 15px 0;">
+                <h4 style="margin: 0; color: #1a73e8;">
+                    <a href="{job_url}" style="text-decoration: none; color: #1a73e8;">{job.title}</a>
+                    <span style="background: #e6f4ea; color: #137333; font-size: 12px; padding: 2px 8px; border-radius: 10px; margin-left: 10px;">
+                        {item['score']}% phù hợp
+                    </span>
+                </h4>
+                <p style="margin: 5px 0; color: #666; font-size: 14px;">{company_name}</p>
+                <p style="margin: 5px 0; color: #888; font-size: 13px;">
+                    Lương: {job.salary_ref.name if job.salary_ref else 'Thỏa thuận'} | 
+                    Kinh nghiệm: {job.experience_ref.name if job.experience_ref else 'Không yêu cầu'}
+                </p>
+            </div>
+            """
+
+        body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #1a73e8; color: white; padding: 20px; text-align: center;">
+                        <h2 style="margin: 0;">Job5ing Recommendations</h2>
+                    </div>
+                    <div style="padding: 20px;">
+                        <p>Xin chào <strong>{get_display_name(user)}</strong>,</p>
+                        <p>Dựa trên kỹ năng và kinh nghiệm trong hồ sơ của bạn, chúng tôi đã tìm thấy những cơ hội việc làm hấp dẫn dành riêng cho bạn hôm nay:</p>
+                        
+                        <div style="margin-top: 20px;">
+                            {job_list_html}
+                        </div>
+                        
+                        <div style="margin-top: 30px; text-align: center;">
+                            <a href="{url_for('main.index', _external=True)}" 
+                               style="background: #1a73e8; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                                Xem thêm tất cả việc làm
+                            </a>
+                        </div>
+                    </div>
+                    <div style="background: #f8f9fa; color: #888; padding: 15px; text-align: center; font-size: 12px;">
+                        <p>Bạn nhận được email này vì bạn đã đăng ký tài khoản trên Job5ing.</p>
+                        <p>&copy; 2026 Job5ing Team. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        send_email(user.email, subject, body)
+        print(f"Đã gửi gợi ý việc làm tới: {user.email}")
 
 
 def preview_resume(files=None):

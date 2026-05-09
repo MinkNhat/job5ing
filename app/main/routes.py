@@ -18,6 +18,7 @@ from .services import (
     update_account_profile,
     validate_google_state_token,
     get_user_cv,
+    get_recommended_jobs,
     preview_resume,
     save_resume,
     validate_tax_code,
@@ -398,6 +399,7 @@ def google_callback():
         success, message = login_with_google_profile(profile)
 
         if success:
+            session.modified = True
             user = User.query.filter_by(email=profile.get("email").lower()).first()
             if target_is_employer and user:
                 user.is_employer = True

@@ -1,442 +1,326 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+import random
 from app import create_app, db
 from app.models import (
     Location, CompanyScale, ExperienceOption, SalaryOption,
     Company, User, Recruiter, CV, CVSkill, CVEducation, CVExperience, Post, PostSkill,
     Application, ApplicationStatusHistory, PostReport, Notification
 )
+from app.main.recruiter_services import calculate_ai_score
+
 
 def seed_data():
-    if User.query.first() is not None:
-        print("Database already has data. Skipping seed.")
-        return False
+    # Luôn reset database để dữ liệu đồng bộ và mới nhất cho demo
+    db.drop_all()
+    db.create_all()
 
     try:
+        print("🚀 Đang khởi tạo bộ dữ liệu mẫu SIÊU CẤP (Mega Demo Seed)...")
+
+        # 1. Cấu hình cơ bản
         locations = [
             Location(id=1, name='TP. Hồ Chí Minh'),
             Location(id=2, name='Hà Nội'),
             Location(id=3, name='Đà Nẵng'),
             Location(id=4, name='Cần Thơ'),
+            Location(id=5, name='Hải Phòng'),
+            Location(id=6, name='Bình Dương'),
         ]
-        for loc in locations:
-            db.session.add(loc)
+        db.session.add_all(locations)
 
         scales = [
             CompanyScale(id=1, name='1-50 nhân viên'),
             CompanyScale(id=2, name='51-200 nhân viên'),
             CompanyScale(id=3, name='201-500 nhân viên'),
-            CompanyScale(id=4, name='500+ nhân viên'),
+            CompanyScale(id=4, name='501-1000 nhân viên'),
+            CompanyScale(id=5, name='1000+ nhân viên'),
         ]
-        for scale in scales:
-            db.session.add(scale)
+        db.session.add_all(scales)
 
         experiences = [
-            ExperienceOption(id=1, name='Không yêu cầu kinh nghiệm'),
-            ExperienceOption(id=2, name='<1 năm kinh nghiệm'),
-            ExperienceOption(id=3, name='1-3 năm kinh nghiệm'),
-            ExperienceOption(id=4, name='3-5 năm kinh nghiệm'),
-            ExperienceOption(id=5, name='>5 năm kinh nghiệm'),
+            ExperienceOption(id=1, name='Không yêu cầu'),
+            ExperienceOption(id=2, name='<1 năm'),
+            ExperienceOption(id=3, name='1-3 năm'),
+            ExperienceOption(id=4, name='3-5 năm'),
+            ExperienceOption(id=5, name='>5 năm'),
+            ExperienceOption(id=6, name='Cấp Quản lý'),
         ]
-        for exp in experiences:
-            db.session.add(exp)
+        db.session.add_all(experiences)
 
         salaries = [
             SalaryOption(id=1, name='Không lương'),
             SalaryOption(id=2, name='1-3 triệu'),
             SalaryOption(id=3, name='3-5 triệu'),
             SalaryOption(id=4, name='5-10 triệu'),
-            SalaryOption(id=5, name='10-30 triệu'),
-            SalaryOption(id=6, name='Trên 30 triệu'),
-            SalaryOption(id=7, name='Thỏa thuận'),
+            SalaryOption(id=5, name='10-20 triệu'),
+            SalaryOption(id=6, name='20-30 triệu'),
+            SalaryOption(id=7, name='Trên 30 triệu'),
+            SalaryOption(id=8, name='Thỏa thuận'),
         ]
-        for salary in salaries:
-            db.session.add(salary)
-
+        db.session.add_all(salaries)
         db.session.flush()
 
+        # 2. Người dùng (Users) - Giữ nguyên 10 user gốc
+        admin_pass = 'scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28'
+
         users = [
-            User(id=1, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Admin', last_name='System',
+            User(id=1, password=admin_pass, first_name='Admin', last_name='System',
                  email='admin@testjob5ing.com', phone='0901234567',
                  address='Tòa nhà Admin, Quận 1, TP.HCM', date_of_birth=date(1990, 1, 1),
                  sex='Male', is_active=True, is_admin=True, is_employer=False,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=2, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Huy', last_name='Tran',
+                 avatar_url='https://i.pravatar.cc/150?u=admin'),
+            User(id=2, password=admin_pass, first_name='Huy', last_name='Tran',
                  email='huy@testjob5ing.com', phone='0912345678',
                  address='Quận Cầu Giấy, Hà Nội', date_of_birth=date(1992, 5, 12),
                  sex='Male', is_active=True, is_admin=False, is_employer=True,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=3, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Anh', last_name='Pham',
+                 avatar_url='https://i.pravatar.cc/150?u=huy'),
+            User(id=3, password=admin_pass, first_name='Anh', last_name='Pham',
                  email='anh@testjob5ing.com', phone='0923456789',
                  address='Quận 3, TP.HCM', date_of_birth=date(1995, 8, 20),
                  sex='Female', is_active=True, is_admin=False, is_employer=True,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=4, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Long', last_name='Nguyen',
+                 avatar_url='https://i.pravatar.cc/150?u=anh'),
+            User(id=4, password=admin_pass, first_name='Long', last_name='Nguyen',
                  email='long@testjob5ing.com', phone='0934567890',
                  address='Quận Hải Châu, Đà Nẵng', date_of_birth=date(1988, 11, 5),
                  sex='Male', is_active=True, is_admin=False, is_employer=True,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=5, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Khanh', last_name='Le',
+                 avatar_url='https://i.pravatar.cc/150?u=long'),
+            User(id=5, password=admin_pass, first_name='Khanh', last_name='Le',
                  email='khanh@testjob5ing.com', phone='0945678901',
                  address='Quận Ninh Kiều, Cần Thơ', date_of_birth=date(1994, 2, 14),
                  sex='Female', is_active=True, is_admin=False, is_employer=True,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=6, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Linh', last_name='Nguyen',
+                 avatar_url='https://i.pravatar.cc/150?u=khanh'),
+            User(id=6, password=admin_pass, first_name='Linh', last_name='Nguyen',
                  email='linh@testjob5ing.com', phone='0956789012',
                  address='Quận 7, TP.HCM', date_of_birth=date(1991, 9, 30),
                  sex='Female', is_active=True, is_admin=False, is_employer=True,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=7, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Minh', last_name='Le',
+                 avatar_url='https://i.pravatar.cc/150?u=linh'),
+            User(id=7, password=admin_pass, first_name='Minh', last_name='Le',
                  email='minh@testjob5ing.com', phone='0967890123',
                  address='Quận Tân Bình, TP.HCM', date_of_birth=date(1998, 4, 25),
                  sex='Male', is_active=True, is_admin=False, is_employer=False,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 3, 18, 49, 35),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=8, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Tuan', last_name='Vo',
+                 avatar_url='https://i.pravatar.cc/150?u=minh'),
+            User(id=8, password=admin_pass, first_name='Tuan', last_name='Vo',
                  email='tuan@testjob5ing.com', phone='0978901234',
                  address='Quận Đống Đa, Hà Nội', date_of_birth=date(2000, 12, 10),
                  sex='Male', is_active=True, is_admin=False, is_employer=False,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=9, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Trang', last_name='Pham',
+                 avatar_url='https://i.pravatar.cc/150?u=tuan'),
+            User(id=9, password=admin_pass, first_name='Trang', last_name='Pham',
                  email='trang@testjob5ing.com', phone='0989012345',
                  address='Quận Sơn Trà, Đà Nẵng', date_of_birth=date(1999, 7, 7),
                  sex='Female', is_active=True, is_admin=False, is_employer=False,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
-            User(id=10, password='scrypt:32768:8:1$DBfLeANMNIhwOcCg$b25e8284c507670c1c0be1e025d35c9412f7b9f6debe8a37710f62f94dbabc139a4bf578da24c45ec987818b72271e54a8a3bd4b9502be953a59203b49116d28', first_name='Nam', last_name='Hoang',
+                 avatar_url='https://i.pravatar.cc/150?u=trang'),
+            User(id=10, password=admin_pass, first_name='Nam', last_name='Hoang',
                  email='nam@testjob5ing.com', phone='0990123456',
                  address='Quận 10, TP.HCM', date_of_birth=date(1997, 3, 18),
                  sex='Male', is_active=True, is_admin=False, is_employer=False,
                  created_at=datetime(2026, 5, 4, 1, 11, 12), last_login=datetime(2026, 5, 4, 1, 11, 12),
-                 avatar_url='https://via.placeholder.com/150'),
+                 avatar_url='https://i.pravatar.cc/150?u=nam'),
         ]
-        for user in users:
-            db.session.add(user)
 
+        # Thêm 100 User mới để demo quy mô lớn
+        vn_last = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ',
+                   'Ngô', 'Dương']
+        vn_mid = ['Văn', 'Thị', 'Minh', 'Anh', 'Ngọc', 'Quang', 'Xuân', 'Đức', 'Trọng', 'Kim', 'Thanh', 'Hải']
+        vn_first = ['Hùng', 'Tuấn', 'Dũng', 'Lan', 'Hương', 'Linh', 'Thành', 'Bảo', 'Long', 'Tiến', 'Việt', 'Nam',
+                    'Trang', 'Mai', 'Chi', 'An', 'Bình']
+
+        all_candidate_ids = list(range(7, 11))
+        all_user_ids = list(range(1, 11))
+        for i in range(11, 121):
+            is_emp = i > 105  # Các user cuối làm employer
+            fname, lname = f"{random.choice(vn_mid)} {random.choice(vn_first)}", random.choice(vn_last)
+            u = User(id=i, password=admin_pass, first_name=fname, last_name=lname, email=f'user{i}@demo.com',
+                     phone=f'09{random.randint(10000000, 99999999)}', address=f'Số {i}, Đường ABC, TP.HCM',
+                     is_active=True, is_admin=False, is_employer=is_emp,
+                     date_of_birth=date(1985 + random.randint(0, 20), 1, 1), sex=random.choice(['Male', 'Female']))
+            users.append(u)
+            all_user_ids.append(i)
+            if not is_emp:
+                all_candidate_ids.append(i)
+
+        db.session.add_all(users)
         db.session.flush()
 
-        companies = [
-            Company(id=1, name='FPT Software', location='Khu Công Nghệ Cao, Quận 9',
-                   city_id=1, website='fpt.com', establish_date=date(1999, 1, 1),
-                   scale_id=4, tax_code='TAX01', description='Tập đoàn công nghệ hàng đầu Việt Nam.',
-                   is_approved=True, avatar_url='https://via.placeholder.com/200', business_license='license_fpt.pdf'),
-            Company(id=2, name='VNG', location='Khu chế xuất Tân Thuận, Quận 7',
-                   city_id=1, website='vng.com.vn', establish_date=date(2004, 9, 9),
-                   scale_id=4, tax_code='TAX02', description='Kỳ lân công nghệ đầu tiên của Việt Nam.',
-                   is_approved=True, avatar_url='https://via.placeholder.com/200', business_license='license_vng.pdf'),
-            Company(id=3, name='VNPay', location='Tòa nhà VNPAY, Nam Từ Liêm',
-                   city_id=2, website='vnpay.vn', establish_date=date(2007, 3, 1),
-                   scale_id=3, tax_code='TAX03', description='Công ty Cổ phần Giải pháp Thanh toán Việt Nam.',
-                   is_approved=True, avatar_url='https://via.placeholder.com/200', business_license='license_vnpay.pdf'),
-            Company(id=4, name='MoMo', location='Tòa nhà Phú Mỹ Hưng, Quận 7',
-                   city_id=1, website='momo.vn', establish_date=date(2007, 11, 15),
-                   scale_id=3, tax_code='TAX04', description='Siêu ứng dụng thanh toán hàng đầu.',
-                   is_approved=True, avatar_url='https://via.placeholder.com/200', business_license='license_momo.pdf'),
-            Company(id=5, name='Tiki', location='Tòa nhà Viettel, Quận 10',
-                   city_id=1, website='tiki.vn', establish_date=date(2010, 3, 1),
-                   scale_id=4, tax_code='TAX05', description='Nền tảng thương mại điện tử đáng tin cậy.',
-                   is_approved=True, avatar_url='https://via.placeholder.com/200', business_license='license_tiki.pdf'),
+        # 3. Công ty (Companies) - 15 Công ty với thông tin đầy đủ
+        company_specs = [
+            ('FPT Software', 'fpt.com',
+             'Tập đoàn công nghệ hàng đầu Việt Nam, chuyên cung cấp các giải pháp chuyển đổi số toàn cầu và dịch vụ CNTT chất lượng cao cho thị trường Nhật, Mỹ, Âu.'),
+            ('VNG Corporation', 'vng.com.vn',
+             'Công ty internet hàng đầu Việt Nam, sở hữu hệ sinh thái Zing, Zalo, ZaloPay và hàng loạt tựa game nổi tiếng toàn cầu.'),
+            ('VNPay', 'vnpay.vn',
+             'Đơn vị đi đầu trong lĩnh vực Fintech tại Việt Nam với mạng lưới thanh toán QR Code phủ khắp cả nước và các giải pháp ngân hàng số hiện đại.'),
+            ('MoMo', 'momo.vn',
+             'Siêu ứng dụng thanh toán số 1 Việt Nam, phục vụ hàng chục triệu người dùng với các dịch vụ tài chính, giải trí và mua sắm tiện lợi.'),
+            ('Tiki', 'tiki.vn',
+             'Hệ sinh thái thương mại điện tử "All-in-one" uy tín nhất Việt Nam với hệ thống Logistics hiện đại và dịch vụ khách hàng tận tâm.'),
+            ('Viettel Tech', 'viettel.vn',
+             'Khối công nghệ và viễn thông thuộc tập đoàn Viettel, doanh nghiệp viễn thông lớn nhất Việt Nam và top đầu khu vực.'),
+            ('Grab Vietnam', 'grab.com',
+             'Siêu ứng dụng đa dịch vụ hàng đầu Đông Nam Á, cung cấp các giải pháp di chuyển, giao hàng và tài chính cho mọi người.'),
+            ('Shopee Vietnam', 'shopee.vn',
+             'Nền tảng thương mại điện tử phổ biến nhất Việt Nam, thuộc tập đoàn SEA Limited, mang lại trải nghiệm mua sắm dễ dàng.'),
+            ('Techcombank IT', 'techcombank.com',
+             'Khối công nghệ của ngân hàng tư nhân lớn nhất Việt Nam, tiên phong trong hành trình chuyển đổi số ngành tài chính.'),
+            ('VinTech', 'vin-tech.net',
+             'Đơn vị nghiên cứu và phát triển công nghệ cao thuộc tập đoàn Vingroup, tập trung vào AI, Big Data và Robot.'),
+            ('CMC Global', 'cmcglobal.com.vn',
+             'Công ty cung cấp giải pháp phần mềm và dịch vụ CNTT quốc tế hàng đầu, đối tác tin cậy của nhiều doanh nghiệp lớn trên thế giới.'),
+            ('Vietcombank Digital', 'vietcombank.com.vn',
+             'Trung tâm chuyển đổi số của ngân hàng Vietcombank, xây dựng các hệ thống ngân hàng thế hệ mới cho hàng triệu khách hàng.'),
+            ('NashTech', 'nashtechglobal.com',
+             'Tư vấn và phát triển giải pháp phần mềm toàn cầu, có môi trường làm việc chuyên nghiệp chuẩn quốc tế.'),
+            ('KMS Technology', 'kms-technology.com',
+             'Công ty phát triển phần mềm chất lượng cao từ Mỹ, chuyên cung cấp các sản phẩm và dịch vụ công nghệ cho thị trường toàn cầu.'),
+            ('Amanotes', 'amanotes.com',
+             'Công ty game âm nhạc (Music Games) hàng đầu thế giới, sở hữu hàng tỷ lượt tải trên các kho ứng dụng di động.')
         ]
-        for company in companies:
-            db.session.add(company)
 
+        companies = []
+        for i, (name, site, desc) in enumerate(company_specs):
+            c = Company(id=i + 1, name=name, location=f'Tòa nhà {name}, Quận 1, TP.HCM',
+                        city_id=random.randint(1, 4), website=site,
+                        establish_date=date(1995 + random.randint(0, 25), 1, 1),
+                        scale_id=random.randint(1, 5), tax_code=f'TAX{i + 1:05d}', description=desc,
+                        is_approved=True, avatar_url=f'https://logo.clearbit.com/{site}',
+                        business_license=f'license_{i + 1}.pdf')
+            companies.append(c)
+        db.session.add_all(companies)
         db.session.flush()
 
-        recruiters = [
-            Recruiter(user_id=2, company_id=1, position='HR Manager', is_approved=True, is_company_admin=True),
-            Recruiter(user_id=3, company_id=2, position='Recruitment Specialist', is_approved=True, is_company_admin=True),
-            Recruiter(user_id=4, company_id=3, position='Talent Acquisition', is_approved=True, is_company_admin=True),
-            Recruiter(user_id=5, company_id=4, position='HR Director', is_approved=True, is_company_admin=True),
-            Recruiter(user_id=6, company_id=5, position='Tech Recruiter', is_approved=True, is_company_admin=True),
-        ]
-        for recruiter in recruiters:
-            db.session.add(recruiter)
+        # 4. Nhà tuyển dụng (Recruiters)
+        recruiters = []
+        # Users 2-6 là HR cho các công ty đầu
+        for i in range(2, 7):
+            r = Recruiter(user_id=i, company_id=i - 1, position='HR Manager', is_approved=True, is_company_admin=True)
+            recruiters.append(r)
 
+        # Thêm HR cho các công ty còn lại từ các user mới
+        for i in range(106, 121):
+            cid = (i - 106) % 15 + 1
+            r = Recruiter(user_id=i, company_id=cid, position='Lead Recruiter', is_approved=True, is_company_admin=True)
+            recruiters.append(r)
+        db.session.add_all(recruiters)
         db.session.flush()
 
-        cvs = [
-            CV(id=1, user_id=7, title='Java Backend Dev', summary='Kỹ sư phần mềm đam mê Backend',
-               cv_url='aws.s3/cv1.pdf', cv_content='Nội dung text CV 1',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            CV(id=2, user_id=7, title='Python Backend Dev', summary='Chuyên gia xây dựng API bằng Python',
-               cv_url='aws.s3/cv2.pdf', cv_content='Nội dung text CV 2',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            CV(id=3, user_id=8, title='ReactJS Frontend', summary='Yêu thích làm đẹp giao diện web',
-               cv_url='aws.s3/cv3.pdf', cv_content='Nội dung text CV 3',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            CV(id=4, user_id=8, title='VueJS Frontend', summary='Cứng tay VueJS và Nuxt',
-               cv_url='aws.s3/cv4.pdf', cv_content='Nội dung text CV 4',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            CV(id=5, user_id=9, title='Manual Tester', summary='Cẩn thận, tỉ mỉ, tìm bug nhanh',
-               cv_url='aws.s3/cv5.pdf', cv_content='Nội dung text CV 5',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            CV(id=6, user_id=9, title='Automation Tester', summary='Viết script automation chạy mượt',
-               cv_url='aws.s3/cv6.pdf', cv_content='Nội dung text CV 6',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            CV(id=7, user_id=10, title='DevOps Engineer', summary='Tối ưu CI/CD pipeline',
-               cv_url='aws.s3/cv7.pdf', cv_content='Nội dung text CV 7',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            CV(id=8, user_id=10, title='AWS Cloud Engineer', summary='Chuyên thiết kế hạ tầng Cloud AWS',
-               cv_url='aws.s3/cv8.pdf', cv_content='Nội dung text CV 8',
-               created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-        ]
-        for cv in cvs:
+        # 5. Bài đăng (Posts) - 60+ Tin với mô tả chi tiết
+        stacks = {
+            'Java': 'Java, Spring Boot, MySQL, Docker, Microservices, Hibernate, Kafka, Redis',
+            'Python': 'Python, FastAPI, Django, PostgreSQL, Docker, Redis, Celery, MongoDB',
+            'Frontend': 'ReactJS, TypeScript, Next.js, Tailwind CSS, HTML5, CSS3, Redux, Figma',
+            'DevOps': 'AWS, Kubernetes, CI/CD, Terraform, Linux, Ansible, Docker, Jenkins',
+            'QA': 'Manual Test, Automation Test, Selenium, JIRA, SQL, Cypress, Appium',
+            'Mobile': 'Flutter, Dart, Firebase, SQLite, Clean Architecture, Android, iOS',
+            'Bridge': 'Java, Project Management, Japanese N2, Communication, Bridge SE',
+            'AI': 'Python, PyTorch, TensorFlow, Computer Vision, Machine Learning, NLP'
+        }
+
+        all_posts = []
+        today = date.today()
+        for i in range(1, 61):
+            stack_name = random.choice(list(stacks.keys()))
+            skills_str = stacks[stack_name]
+            p = Post(
+                id=i, recruiter_id=random.choice(recruiters).user_id,
+                title=f"{stack_name} Developer - {random.choice(['Senior', 'Junior', 'Middle'])}",
+                description=f"### MÔ TẢ CÔNG VIỆC\n- Thiết kế và phát triển hệ thống {stack_name} quy mô lớn, đảm bảo tính sẵn sàng và hiệu năng cao.\n- Tham gia vào toàn bộ vòng đời phát triển phần mềm từ ý tưởng, thiết kế đến triển khai.\n- Phối hợp chặt chẽ với team thiết kế và quản lý sản phẩm để đưa ra giải pháp tốt nhất.\n\n### YÊU CẦU\n- Thành thạo: {skills_str}.\n- Có tư duy lập trình tốt, am hiểu về cấu trúc dữ liệu và giải thuật.\n- Khả năng làm việc độc lập và kỹ năng làm việc nhóm hiệu quả.\n\n### QUYỀN LỢI\n- Mức lương cạnh tranh, tương xứng với năng lực.\n- Thưởng tháng lương 13, 14 và các khoản thưởng hiệu quả kinh doanh.\n- Được tham gia các khóa đào tạo chuyên sâu và lộ trình thăng tiến rõ ràng.",
+                experience_id=random.randint(2, 5), salary_id=random.randint(4, 7),
+                deadline=today + timedelta(days=random.randint(15, 120)),
+                status='PINNED' if i <= 6 else 'ACTIVE'
+            )
+            db.session.add(p)
+            db.session.flush()
+            p.skills = skills_str
+            all_posts.append(p)
+
+            # Thêm PostSkill (cho backward compatibility nếu dùng bảng này)
+            for s in skills_str.split(', '):
+                db.session.add(PostSkill(post_id=p.id, skill_name=s))
+
+        # 6. CVs (Đầy đủ hồ sơ cho 100+ ứng viên)
+        cvs = []
+        for i, uid in enumerate(all_candidate_ids, 1):
+            stack_name = random.choice(list(stacks.keys()))
+            is_match = random.random() < 0.7  # 70% khớp hoàn toàn để demo AI
+            my_skills = stacks[stack_name] if is_match else "Giao tiếp, Tin học văn phòng, Anh văn cơ bản"
+
+            cv = CV(
+                id=i, user_id=uid, title=f"Kỹ sư {stack_name} - Chuyên gia hệ thống",
+                summary=f"Tôi là một lập trình viên {stack_name} với niềm đam mê xây dựng những sản phẩm công nghệ tuyệt vời. Tôi đã có kinh nghiệm làm việc trong các dự án quy mô vừa và lớn, luôn hướng tới việc tối ưu hóa mã nguồn và mang lại giá trị cao nhất cho doanh nghiệp.",
+                cv_url=f"https://job5ing.s3.amazonaws.com/cvs/cv_{i}.pdf",
+                cv_content=f"Thông tin chi tiết của ứng viên {uid}.\nKỹ năng chuyên môn: {my_skills}.\nKinh nghiệm làm việc: 5 năm tại các công ty lớn."
+            )
+            cv.skills = my_skills  # Trigger setter để thêm vào CVSkill table
             db.session.add(cv)
+            db.session.flush()
 
-        db.session.flush()
+            # Thêm Education detail
+            db.session.add(CVEducation(cv_id=i, school='Đại học Bách Khoa', major='Công nghệ Thông tin',
+                                       start_date=date(2018, 9, 1), end_date=date(2022, 6, 30)))
+            # Thêm Experience detail
+            db.session.add(
+                CVExperience(cv_id=i, job_title=f'{stack_name} Developer', company_name='Global Software Co.',
+                             position='Senior Engineer',
+                             description='Chịu trách nhiệm thiết kế và triển khai các tính năng quan trọng.',
+                             start_date=date(2022, 7, 1)))
+            cvs.append(cv)
 
-        cv_educations = [
-            CVEducation(id=1, cv_id=1, school='Đại học KHTN', major='Công nghệ Thông tin', start_date=date(2018, 9, 1), end_date=date(2022, 6, 30)),
-            CVEducation(id=2, cv_id=2, school='Đại học KHTN', major='Khoa học Máy tính', start_date=date(2018, 9, 1), end_date=date(2022, 6, 30)),
-            CVEducation(id=3, cv_id=3, school='Đại học Bách Khoa', major='Kỹ thuật Phần mềm', start_date=date(2019, 9, 1), end_date=date(2023, 6, 30)),
-            CVEducation(id=4, cv_id=4, school='Đại học Bách Khoa', major='Công nghệ Web', start_date=date(2019, 9, 1), end_date=date(2023, 6, 30)),
-            CVEducation(id=5, cv_id=5, school='Đại học CNTT', major='Kỹ thuật Phần mềm', start_date=date(2020, 9, 1), end_date=date(2024, 6, 30)),
-            CVEducation(id=6, cv_id=6, school='Đại học CNTT', major='Kiểm thử Phần mềm', start_date=date(2020, 9, 1), end_date=date(2024, 6, 30)),
-            CVEducation(id=7, cv_id=7, school='Đại học FPT', major='Hệ thống Thông tin', start_date=date(2017, 9, 1), end_date=date(2021, 6, 30)),
-            CVEducation(id=8, cv_id=8, school='Đại học FPT', major='Cơ sở Dữ liệu', start_date=date(2017, 9, 1), end_date=date(2021, 6, 30)),
-        ]
-        for edu in cv_educations:
-            db.session.add(edu)
+        # 7. Đơn ứng tuyển (Applications) - 350+ Đơn với AI Score thực tế
+        print("📝 Đang tạo 350+ đơn ứng tuyển...")
+        applied_pairs = set()
+        count = 0
+        while count < 350:
+            p = random.choice(all_posts)
+            cv = random.choice(cvs)
+            if (p.id, cv.id) not in applied_pairs:
+                applied_pairs.add((p.id, cv.id))
+                score = calculate_ai_score(cv.id, p.id)
+                status = random.choice(['RECEIVED', 'INTERVIEW', 'APPROVED', 'REJECT'])
+                app = Application(cv_id=cv.id, post_id=p.id, ai_score=score, status=status,
+                                  applied_at=datetime.now() - timedelta(days=random.randint(0, 20)),
+                                  cover_letter=f"Kính gửi bộ phận tuyển dụng, tôi là {cv.user.first_name}, tôi tin rằng kinh nghiệm {cv.skills} của tôi rất phù hợp với vị trí {p.title} của quý công ty.")
+                db.session.add(app)
+                db.session.flush()
 
-        cv_experiences = [
-            CVExperience(id=1, cv_id=1, job_title='Junior Java Developer', company_name='Công ty ABC', position='Lập trình viên', description='Phát triển tính năng backend cho hệ thống quản lý', start_date=date(2022, 7, 1), end_date=date(2023, 6, 30)),
-            CVExperience(id=2, cv_id=1, job_title='Senior Java Developer', company_name='Công ty XYZ', position='Lập trình viên cấp cao', description='Thiết kế kiến trúc hệ thống, code review', start_date=date(2023, 7, 1), end_date=None),
-            CVExperience(id=3, cv_id=2, job_title='Python Developer', company_name='Công ty DEF', position='Lập trình viên', description='Xây dựng API bằng FastAPI, làm việc với PostgreSQL', start_date=date(2022, 7, 1), end_date=date(2024, 6, 30)),
-            CVExperience(id=4, cv_id=2, job_title='Backend Engineer', company_name='Công ty GHI', position='Kỹ sư Backend', description='Phát triển microservices, Docker và K8s', start_date=date(2024, 7, 1), end_date=None),
-            CVExperience(id=5, cv_id=3, job_title='Frontend Developer', company_name='Công ty JKL', position='Lập trình viên Frontend', description='Xây dựng giao diện web bằng ReactJS', start_date=date(2023, 7, 1), end_date=date(2024, 6, 30)),
-            CVExperience(id=6, cv_id=3, job_title='React Developer', company_name='Công ty MNO', position='Lập trình viên', description='Tối ưu hiệu suất ứng dụng, state management', start_date=date(2024, 7, 1), end_date=None),
-            CVExperience(id=7, cv_id=4, job_title='Vue Developer', company_name='Công ty PQR', position='Lập trình viên Frontend', description='Phát triển ứng dụng web với Vue.js và Nuxt', start_date=date(2023, 7, 1), end_date=date(2024, 6, 30)),
-            CVExperience(id=8, cv_id=4, job_title='Full Stack Developer', company_name='Công ty STU', position='Lập trình viên Full Stack', description='Làm việc với Vue frontend và Node.js backend', start_date=date(2024, 7, 1), end_date=None),
-            CVExperience(id=9, cv_id=5, job_title='QA Tester', company_name='Công ty VWX', position='Kiểm thử viên', description='Kiểm thử chức năng, viết test case', start_date=date(2024, 1, 1), end_date=None),
-            CVExperience(id=10, cv_id=6, job_title='Automation Tester', company_name='Công ty YZA', position='QA Automation', description='Viết test automation bằng Selenium, Cypress', start_date=date(2023, 7, 1), end_date=None),
-            CVExperience(id=11, cv_id=7, job_title='DevOps Engineer', company_name='Công ty BCD', position='Kỹ sư DevOps', description='Quản lý CI/CD pipeline, cấu hình Jenkins', start_date=date(2022, 7, 1), end_date=date(2024, 6, 30)),
-            CVExperience(id=12, cv_id=7, job_title='Senior DevOps', company_name='Công ty EFG', position='Lãnh đạo DevOps', description='Kiến trúc hệ thống, Kubernetes cluster', start_date=date(2024, 7, 1), end_date=None),
-            CVExperience(id=13, cv_id=8, job_title='Cloud Engineer', company_name='Công ty HIJ', position='Kỹ sư Cloud', description='Thiết kế hạ tầng AWS, quản lý EC2, S3, RDS', start_date=date(2022, 7, 1), end_date=date(2024, 6, 30)),
-            CVExperience(id=14, cv_id=8, job_title='AWS Solutions Architect', company_name='Công ty KLM', position='Kiến trúc sư', description='Tư vấn giải pháp AWS, tối ưu chi phí cloud', start_date=date(2024, 7, 1), end_date=None),
-        ]
-        for exp in cv_experiences:
-            db.session.add(exp)
+                # Thêm History
+                if status != 'RECEIVED':
+                    db.session.add(
+                        ApplicationStatusHistory(application_id=app.id, old_status='RECEIVED', new_status=status,
+                                                 notes='Hồ sơ đạt yêu cầu sơ loại.'))
+                count += 1
 
-        db.session.flush()
+        # 8. Báo cáo & Thông báo
+        for _ in range(15):
+            db.session.add(PostReport(post_id=random.randint(1, 60), user_id=random.choice(all_candidate_ids),
+                                      reason='Spam', description='Nội dung tin tuyển dụng trùng lặp.',
+                                      is_resolved=False))
 
-        cv_skills = [
-            CVSkill(id=1, cv_id=1, skill_name='Java'),
-            CVSkill(id=2, cv_id=1, skill_name='Spring Boot'),
-            CVSkill(id=3, cv_id=1, skill_name='MySQL'),
-            CVSkill(id=4, cv_id=2, skill_name='Python'),
-            CVSkill(id=5, cv_id=2, skill_name='FastAPI'),
-            CVSkill(id=6, cv_id=2, skill_name='Docker'),
-            CVSkill(id=7, cv_id=3, skill_name='ReactJS'),
-            CVSkill(id=8, cv_id=3, skill_name='CSS'),
-            CVSkill(id=9, cv_id=3, skill_name='HTML'),
-            CVSkill(id=10, cv_id=4, skill_name='Vue'),
-            CVSkill(id=11, cv_id=4, skill_name='NuxtJS'),
-            CVSkill(id=12, cv_id=4, skill_name='Tailwind'),
-            CVSkill(id=13, cv_id=5, skill_name='Test Case'),
-            CVSkill(id=14, cv_id=5, skill_name='JIRA'),
-            CVSkill(id=15, cv_id=5, skill_name='SQL'),
-            CVSkill(id=16, cv_id=6, skill_name='Selenium'),
-            CVSkill(id=17, cv_id=6, skill_name='Python'),
-            CVSkill(id=18, cv_id=6, skill_name='Cypress'),
-            CVSkill(id=19, cv_id=7, skill_name='Jenkins'),
-            CVSkill(id=20, cv_id=7, skill_name='Docker'),
-            CVSkill(id=21, cv_id=7, skill_name='Kubernetes'),
-            CVSkill(id=22, cv_id=8, skill_name='AWS EC2'),
-            CVSkill(id=23, cv_id=8, skill_name='S3'),
-            CVSkill(id=24, cv_id=8, skill_name='RDS'),
-        ]
-        for skill in cv_skills:
-            db.session.add(skill)
-
-        posts = [
-            Post(id=1, recruiter_id=2, title='Senior Java Developer', description='Phát triển dự án Outsource thị trường Nhật',
-                 experience_id=4, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=2, recruiter_id=2, title='Junior Python', description='Làm việc với framework FastAPI',
-                 experience_id=2, salary_id=4, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=3, recruiter_id=2, title='BrSE (Kỹ sư cầu nối)', description='Giao tiếp khách hàng Nhật, review code',
-                 experience_id=4, salary_id=6, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=4, recruiter_id=2, title='Fresher Tester', description='Đào tạo từ đầu, có trợ cấp',
-                 experience_id=1, salary_id=2, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=5, recruiter_id=3, title='Game Developer', description='Phát triển core game bằng C++',
-                 experience_id=3, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=6, recruiter_id=3, title='Data Engineer', description='Xử lý big data cho nền tảng Zalo',
-                 experience_id=4, salary_id=6, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=7, recruiter_id=3, title='React Native Dev', description='Làm app di động cho hàng triệu user',
-                 experience_id=3, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=8, recruiter_id=3, title='Security Engineer', description='Đảm bảo an toàn thông tin hệ thống',
-                 experience_id=4, salary_id=6, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=9, recruiter_id=4, title='Golang Developer', description='Xây dựng core thanh toán',
-                 experience_id=3, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=10, recruiter_id=4, title='DevOps Engineer', description='Quản trị hệ thống server Linux',
-                 experience_id=4, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=11, recruiter_id=4, title='Business Analyst', description='Phân tích yêu cầu nghiệp vụ ngân hàng',
-                 experience_id=3, salary_id=4, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=12, recruiter_id=4, title='System Admin', description='Trực hệ thống 24/7',
-                 experience_id=3, salary_id=4, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=13, recruiter_id=5, title='AI Engineer', description='Phát triển mô hình Recommender System',
-                 experience_id=4, salary_id=6, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=14, recruiter_id=5, title='Android Developer', description='Tối ưu hiệu năng app MoMo',
-                 experience_id=3, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=15, recruiter_id=5, title='iOS Developer', description='Phát triển tính năng mới cho iOS',
-                 experience_id=3, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=16, recruiter_id=5, title='QA Lead', description='Quản lý đội ngũ QA 10 người',
-                 experience_id=5, salary_id=6, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=17, recruiter_id=6, title='NodeJS Backend', description='Xây dựng hệ thống quản lý kho',
-                 experience_id=3, salary_id=5, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=18, recruiter_id=6, title='Frontend VueJS', description='Làm trang chủ e-commerce',
-                 experience_id=3, salary_id=4, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=19, recruiter_id=6, title='Data Analyst', description='Phân tích hành vi mua hàng',
-                 experience_id=3, salary_id=4, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-            Post(id=20, recruiter_id=6, title='Product Manager', description='Định hướng sản phẩm cho Seller',
-                 experience_id=5, salary_id=6, deadline=date(2026, 12, 31), status='ACTIVE', is_reported=False,
-                 created_at=datetime(2026, 5, 4, 1, 11, 12), last_modified=datetime(2026, 5, 4, 1, 11, 12)),
-        ]
-        for post in posts:
-            db.session.add(post)
-
-        db.session.flush()
-
-        post_skills = [
-            PostSkill(id=1, post_id=1, skill_name='Java'),
-            PostSkill(id=2, post_id=1, skill_name='Spring Boot'),
-            PostSkill(id=3, post_id=2, skill_name='Python'),
-            PostSkill(id=4, post_id=3, skill_name='Japanese N2'),
-            PostSkill(id=5, post_id=3, skill_name='IT background'),
-            PostSkill(id=6, post_id=4, skill_name='Manual Testing'),
-            PostSkill(id=7, post_id=5, skill_name='C++'),
-            PostSkill(id=8, post_id=5, skill_name='Unity'),
-            PostSkill(id=9, post_id=6, skill_name='Spark'),
-            PostSkill(id=10, post_id=6, skill_name='Hadoop'),
-            PostSkill(id=11, post_id=6, skill_name='Python'),
-            PostSkill(id=12, post_id=7, skill_name='React Native'),
-            PostSkill(id=13, post_id=8, skill_name='PenTest'),
-            PostSkill(id=14, post_id=8, skill_name='CEH'),
-            PostSkill(id=15, post_id=9, skill_name='Golang'),
-            PostSkill(id=16, post_id=9, skill_name='Microservices'),
-            PostSkill(id=17, post_id=10, skill_name='Docker'),
-            PostSkill(id=18, post_id=10, skill_name='K8s'),
-            PostSkill(id=19, post_id=10, skill_name='Linux'),
-            PostSkill(id=20, post_id=11, skill_name='BPMN'),
-            PostSkill(id=21, post_id=11, skill_name='UML'),
-            PostSkill(id=22, post_id=11, skill_name='Finance'),
-            PostSkill(id=23, post_id=12, skill_name='Network'),
-            PostSkill(id=24, post_id=12, skill_name='CCNA'),
-            PostSkill(id=25, post_id=13, skill_name='Python'),
-            PostSkill(id=26, post_id=13, skill_name='Machine Learning'),
-            PostSkill(id=27, post_id=14, skill_name='Kotlin'),
-            PostSkill(id=28, post_id=14, skill_name='Android Studio'),
-            PostSkill(id=29, post_id=15, skill_name='Swift'),
-            PostSkill(id=30, post_id=16, skill_name='Automation Test'),
-            PostSkill(id=31, post_id=16, skill_name='Leadership'),
-            PostSkill(id=32, post_id=17, skill_name='NodeJS'),
-            PostSkill(id=33, post_id=17, skill_name='Express'),
-            PostSkill(id=34, post_id=17, skill_name='MongoDB'),
-            PostSkill(id=35, post_id=18, skill_name='VueJS'),
-            PostSkill(id=36, post_id=18, skill_name='CSS3'),
-            PostSkill(id=37, post_id=19, skill_name='SQL'),
-            PostSkill(id=38, post_id=19, skill_name='Tableau'),
-            PostSkill(id=39, post_id=19, skill_name='Python'),
-            PostSkill(id=40, post_id=20, skill_name='Agile'),
-            PostSkill(id=41, post_id=20, skill_name='Scrum'),
-            PostSkill(id=42, post_id=20, skill_name='UX/UI'),
-        ]
-        for skill in post_skills:
-            db.session.add(skill)
-
-        db.session.flush()
-
-        applications = [
-            Application(id=1, cv_id=1, post_id=1, applied_at=datetime(2026, 5, 4, 1, 11, 12),
-                       ai_score=85, status='INTERVIEW', cover_letter='Em rất mong muốn được làm việc tại FPT'),
-            Application(id=2, cv_id=2, post_id=2, applied_at=datetime(2026, 5, 4, 1, 11, 12),
-                       ai_score=90, status='RECEIVED', cover_letter='Gửi công ty VNG bản CV Python của em'),
-            Application(id=3, cv_id=3, post_id=7, applied_at=datetime(2026, 5, 4, 1, 11, 12),
-                       ai_score=75, status='REJECT', cover_letter='Em đam mê React Native'),
-            Application(id=4, cv_id=7, post_id=10, applied_at=datetime(2026, 5, 4, 1, 11, 12),
-                       ai_score=95, status='APPROVED', cover_letter='Kinh nghiệm DevOps 3 năm xin ứng tuyển'),
-        ]
-        for app in applications:
-            db.session.add(app)
-
-        db.session.flush()
-
-        histories = [
-            ApplicationStatusHistory(id=1, application_id=1, old_status='RECEIVED', new_status='INTERVIEW',
-                                    changed_at=datetime(2026, 5, 4, 1, 11, 13), changed_by_id=2,
-                                    notes='Ứng viên tiềm năng, hẹn PV tuần sau'),
-            ApplicationStatusHistory(id=2, application_id=4, old_status='RECEIVED', new_status='APPROVED',
-                                    changed_at=datetime(2026, 5, 4, 1, 11, 13), changed_by_id=4,
-                                    notes='Đã pass vòng kĩ thuật'),
-        ]
-        for history in histories:
-            db.session.add(history)
-
-        db.session.flush()
-
-        reports = [
-            PostReport(id=1, post_id=1, user_id=7, reason='Spam',
-                      description='Tin tuyển dụng đăng lặp lại nhiều lần',
-                      created_at=datetime(2026, 5, 4, 1, 11, 13), is_resolved=False),
-            PostReport(id=2, post_id=12, user_id=8, reason='Lừa đảo',
-                      description='Yêu cầu đóng phí trước khi phỏng vấn',
-                      created_at=datetime(2026, 5, 4, 1, 11, 13), is_resolved=False),
-        ]
-        for report in reports:
-            db.session.add(report)
-
-        db.session.flush()
-
-        notifications = [
-            Notification(id=1, user_id=7, content='Bạn có lịch phỏng vấn với FPT',
-                        type='INTERVIEW_INVITATION', created_at=datetime(2026, 5, 4, 1, 11, 13), is_read=False),
-            Notification(id=2, user_id=10, content='Chúc mừng bạn đã trúng tuyển VNPay',
-                        type='APPLICATION_STATUS_CHANGED', created_at=datetime(2026, 5, 4, 1, 11, 13), is_read=False),
-            Notification(id=3, user_id=2, content='Tin tuyển dụng của bạn bị report',
-                        type='POST_BLOCKED', created_at=datetime(2026, 5, 4, 1, 11, 13), is_read=False),
-        ]
-        for notif in notifications:
-            db.session.add(notif)
+        for i in range(60):
+            db.session.add(
+                Notification(user_id=random.choice(all_user_ids), content=f'Thông báo hệ thống về hồ sơ số {i + 1}',
+                             type=random.choice(['NEW_APPLICATION', 'APPLICATION_STATUS_CHANGED'])))
 
         db.session.commit()
-        print("Seed data completed successfully!")
+        print(f"THÀNH CÔNG! Đã khởi tạo {count} đơn ứng tuyển và bộ dữ liệu SIÊU CẤP cho Demo.")
         return True
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error seeding data: {str(e)}")
+        print(f"Lỗi khi seed dữ liệu: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise
 
 
-def main():
-    app = create_app()
-    with app.app_context():
-        seed_data()
-
-
 if __name__ == '__main__':
-    main()
+    main_app = create_app()
+    with main_app.app_context():
+        seed_data()
