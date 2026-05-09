@@ -5,9 +5,13 @@ import sys
 def run():
     app = create_app()
     # Cấu hình SERVER_NAME để url_for có thể tạo URL tuyệt đối ngoài request context
-    # Nếu chạy local dùng localhost:5000, nếu lên server hãy dùng domain thật
-    app.config['SERVER_NAME'] = 'localhost:5000'
-    app.config['PREFERRED_URL_SCHEME'] = 'http'
+    # Ưu tiên cấu hình từ file config hoặc .env, nếu không có sẽ dùng domain production
+    if not app.config.get('SERVER_NAME'):
+        app.config['SERVER_NAME'] = 'tongvietbuong.online'
+    
+    # Mặc định dùng https cho production
+    if not app.config.get('PREFERRED_URL_SCHEME'):
+        app.config['PREFERRED_URL_SCHEME'] = 'https'
     
     with app.app_context():
         print("🚀 Bắt đầu gửi gợi ý việc làm hàng ngày...")

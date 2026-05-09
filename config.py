@@ -30,4 +30,8 @@ class Config:
     # Gemini Settings
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
+    # URL Generation Settings
+    SERVER_NAME = os.environ.get('SERVER_NAME')
+    PREFERRED_URL_SCHEME = os.environ.get('PREFERRED_URL_SCHEME', 'https')
+
 
