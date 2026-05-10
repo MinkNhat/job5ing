@@ -224,6 +224,7 @@ def seed_data():
         }
 
         all_posts = []
+        posts_by_stack = {stack: [] for stack in stacks}
         today = date.today()
         for i in range(1, 61):
             stack_name = random.choice(list(stacks.keys()))
@@ -240,6 +241,7 @@ def seed_data():
             db.session.flush()
             p.skills = skills_str
             all_posts.append(p)
+            posts_by_stack[stack_name].append(p)
 
             # Thêm PostSkill (cho backward compatibility nếu dùng bảng này)
             for s in skills_str.split(', '):
@@ -247,55 +249,91 @@ def seed_data():
 
         # 6. CVs (Đầy đủ hồ sơ cho 100+ ứng viên)
         cvs = []
+        cvs_by_stack = {stack: [] for stack in stacks}
         for i, uid in enumerate(all_candidate_ids, 1):
             stack_name = random.choice(list(stacks.keys()))
-            is_match = random.random() < 0.7  # 70% khớp hoàn toàn để demo AI
-            my_skills = stacks[stack_name] if is_match else "Giao tiếp, Tin học văn phòng, Anh văn cơ bản"
+            is_match = random.random() < 0.8  # 80% có kỹ năng thực tế theo stack
+            
+            if is_match:
+                my_skills = stacks[stack_name]
+                summary = f"Tôi là một lập trình viên {stack_name} với niềm đam mê xây dựng những sản phẩm công nghệ tuyệt vời. Tôi đã có kinh nghiệm làm việc trong các dự án quy mô vừa và lớn, luôn hướng tới việc tối ưu hóa mã nguồn và mang lại giá trị cao nhất cho doanh nghiệp."
+            else:
+                my_skills = "Giao tiếp, Tin học văn phòng, Anh văn cơ bản, Teamwork"
+                summary = "Tôi là sinh viên mới tốt nghiệp đang tìm kiếm cơ hội học tập và phát triển trong môi trường chuyên nghiệp. Tôi có tinh thần học hỏi cao và không ngại thử thách."
 
             cv = CV(
-                id=i, user_id=uid, title=f"Kỹ sư {stack_name} - Chuyên gia hệ thống",
-                summary=f"Tôi là một lập trình viên {stack_name} với niềm đam mê xây dựng những sản phẩm công nghệ tuyệt vời. Tôi đã có kinh nghiệm làm việc trong các dự án quy mô vừa và lớn, luôn hướng tới việc tối ưu hóa mã nguồn và mang lại giá trị cao nhất cho doanh nghiệp.",
+                id=i, user_id=uid, title=f"Kỹ sư {stack_name} - {random.choice(['Senior', 'Junior', 'Middle'])} Engineer",
+                summary=summary,
                 cv_url=f"https://job5ing.s3.amazonaws.com/cvs/cv_{i}.pdf",
-                cv_content=f"Thông tin chi tiết của ứng viên {uid}.\nKỹ năng chuyên môn: {my_skills}.\nKinh nghiệm làm việc: 5 năm tại các công ty lớn."
+                cv_content=f"Thông tin chi tiết của ứng viên {uid}.\nKỹ năng chuyên môn: {my_skills}.\nKinh nghiệm làm việc: {random.randint(1, 10)} năm."
             )
             cv.skills = my_skills  # Trigger setter để thêm vào CVSkill table
             db.session.add(cv)
             db.session.flush()
 
             # Thêm Education detail
-            db.session.add(CVEducation(cv_id=i, school='Đại học Bách Khoa', major='Công nghệ Thông tin',
+            db.session.add(CVEducation(cv_id=i, school='Đại học Bách Khoa' if random.random() > 0.3 else 'Đại học Công nghệ', 
+                                       major='Công nghệ Thông tin',
                                        start_date=date(2018, 9, 1), end_date=date(2022, 6, 30)))
             # Thêm Experience detail
             db.session.add(
-                CVExperience(cv_id=i, job_title=f'{stack_name} Developer', company_name='Global Software Co.',
-                             position='Senior Engineer',
-                             description='Chịu trách nhiệm thiết kế và triển khai các tính năng quan trọng.',
+                CVExperience(cv_id=i, job_title=f'{stack_name} Developer', 
+                             company_name=random.choice(['Global Software Co.', 'Tech Solutions', 'Startup Hub', 'Innovation Lab']),
+                             position=random.choice(['Senior Engineer', 'Software Engineer', 'Junior Developer']),
+                             description='Chịu trách nhiệm thiết kế và triển khai các tính năng quan trọng trong hệ thống.',
                              start_date=date(2022, 7, 1)))
             cvs.append(cv)
+            cvs_by_stack[stack_name].append(cv)
 
-        # 7. Đơn ứng tuyển (Applications) - 350+ Đơn với AI Score thực tế
-        print("📝 Đang tạo 350+ đơn ứng tuyển...")
+        # 7. Đơn ứng tuyển (Applications) - 400+ Đơn với AI Score thực tế
+        print("📝 Đang tạo 400+ đơn ứng tuyển có định hướng...")
         applied_pairs = set()
         count = 0
-        while count < 350:
-            p = random.choice(all_posts)
-            cv = random.choice(cvs)
-            if (p.id, cv.id) not in applied_pairs:
-                applied_pairs.add((p.id, cv.id))
-                score = calculate_ai_score(cv.id, p.id)
-                status = random.choice(['RECEIVED', 'INTERVIEW', 'APPROVED', 'REJECT'])
-                app = Application(cv_id=cv.id, post_id=p.id, ai_score=score, status=status,
-                                  applied_at=datetime.now() - timedelta(days=random.randint(0, 20)),
-                                  cover_letter=f"Kính gửi bộ phận tuyển dụng, tôi là {cv.user.first_name}, tôi tin rằng kinh nghiệm {cv.skills} của tôi rất phù hợp với vị trí {p.title} của quý công ty.")
-                db.session.add(app)
-                db.session.flush()
+        
+        # Chiến thuật: Mỗi bài đăng sẽ có khoảng 5-8 đơn ứng tuyển
+        # Trong đó 70% là cùng stack (match cao), 30% là khác stack (match thấp)
+        for p in all_posts:
+            # Lấy stack từ tiêu đề bài đăng
+            p_stack = next((s for s in stacks if s in p.title), None)
+            if not p_stack: continue
+            
+            # Số lượng ứng tuyển cho mỗi post
+            num_apps = random.randint(5, 10)
+            for _ in range(num_apps):
+                if random.random() < 0.7:
+                    # Chọn CV cùng stack
+                    eligible_cvs = cvs_by_stack[p_stack]
+                    if not eligible_cvs: eligible_cvs = cvs
+                else:
+                    # Chọn CV khác stack ngẫu nhiên
+                    eligible_cvs = cvs
+                
+                cv = random.choice(eligible_cvs)
+                
+                if (p.id, cv.id) not in applied_pairs:
+                    applied_pairs.add((p.id, cv.id))
+                    score = calculate_ai_score(cv.id, p.id)
+                    
+                    # Trạng thái dựa trên score
+                    if score >= 70:
+                        status = random.choice(['INTERVIEW', 'APPROVED', 'RECEIVED'])
+                    elif score >= 40:
+                        status = random.choice(['RECEIVED', 'INTERVIEW', 'REJECT'])
+                    else:
+                        status = random.choice(['RECEIVED', 'REJECT'])
+                        
+                    app = Application(cv_id=cv.id, post_id=p.id, ai_score=score, status=status,
+                                      applied_at=datetime.now() - timedelta(days=random.randint(0, 20)),
+                                      cover_letter=f"Kính gửi bộ phận tuyển dụng, tôi là {cv.user.first_name}, tôi rất quan tâm đến vị trí {p.title}. Với kỹ năng {cv.skills}, tôi tin mình có thể đóng góp tốt cho công ty.")
+                    db.session.add(app)
+                    db.session.flush()
 
-                # Thêm History
-                if status != 'RECEIVED':
-                    db.session.add(
-                        ApplicationStatusHistory(application_id=app.id, old_status='RECEIVED', new_status=status,
-                                                 notes='Hồ sơ đạt yêu cầu sơ loại.'))
-                count += 1
+                    # Thêm History
+                    if status != 'RECEIVED':
+                        db.session.add(
+                            ApplicationStatusHistory(application_id=app.id, old_status='RECEIVED', new_status=status,
+                                                     notes='Hệ thống tự động cập nhật dựa trên chất lượng hồ sơ (Demo).'))
+                    count += 1
 
         # 8. Báo cáo & Thông báo
         for _ in range(15):
