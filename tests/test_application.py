@@ -46,26 +46,38 @@ class ApplicationTestCase(unittest.TestCase):
         db.session.add(company)
         db.session.flush()
 
-        # Create recruiter
+        # Create recruiters
         recruiter_user = User(
             email="recruiter@example.com",
             password=generate_password_hash("Password123!"),
             is_active=True,
             is_employer=True
         )
-        db.session.add(recruiter_user)
+        recruiter_user2 = User(
+            email="recruiter2@example.com",
+            password=generate_password_hash("Password123!"),
+            is_active=True,
+            is_employer=True
+        )
+        db.session.add_all([recruiter_user, recruiter_user2])
         db.session.flush()
 
         recruiter = Recruiter(
             user_id=recruiter_user.id,
             company_id=company.id,
-            position="HR",
+            position="HR Manager",
             is_approved=True
         )
-        db.session.add(recruiter)
+        recruiter2 = Recruiter(
+            user_id=recruiter_user2.id,
+            company_id=company.id,
+            position="HR Assistant",
+            is_approved=True
+        )
+        db.session.add_all([recruiter, recruiter2])
         db.session.flush()
 
-        # Create post
+        # Create post (by recruiter 1)
         post = Post(
             title="Senior Python Developer",
             description="Looking for an expert Python developer.",
@@ -92,20 +104,24 @@ class ApplicationTestCase(unittest.TestCase):
             follow_redirects=True
         )
 
-    def test_apply_job_without_cv(self):
-        """Test candidate applying without setting up CV redirects to resume"""
-        self.login("candidate@example.com")
-        
+    def test_recruiter_view_application_same_company(self):
+        """Test recruiter can view application for a post created by another recruiter in the same company"""
         with self.app.app_context():
+            candidate = User.query.filter_by(email="candidate@example.com").first()
+            cv = CV(user_id=candidate.id, title="My CV", cv_content='{"skills": "Python"}')
+            db.session.add(cv)
             post = Post.query.first()
-            post_id = post.id
-            
-        response = self.client.post(f"/post/{post_id}/apply", follow_redirects=True)
+            application = Application(cv_id=cv.id, post_id=post.id)
+            db.session.add(application)
+            db.session.commit()
+            app_id = application.id
+
+        # Login as recruiter 2 (who didn't create the post)
+        self.login("recruiter2@example.com")
+        response = self.client.get(f"/manage-candidates/view-cv/{app_id}")
         self.assertEqual(response.status_code, 200)
-        data = response.get_data(as_text=True)
-        
-        self.assertIn("Vui lòng cập nhật hồ sơ CV", data)
-        self.assertIn("Quản lý CV", data) # checking if it redirected to resume page
+        self.assertIn("Chi tiết hồ sơ", response.get_data(as_text=True))
+        self.assertNotIn("Bạn không có quyền xem hồ sơ này", response.get_data(as_text=True))
 
     def test_apply_job_success(self):
         """Test candidate applying with valid CV"""
@@ -116,11 +132,13 @@ class ApplicationTestCase(unittest.TestCase):
             cv = CV(user_id=candidate.id, title="My CV", cv_content='{"skills": "Python"}')
             db.session.add(cv)
             db.session.commit()
+            cv_id = cv.id
             
             post = Post.query.first()
             post_id = post.id
             
         response = self.client.post(f"/post/{post_id}/apply", data={
+            "cv_id": cv_id,
             "phone": "0901234567",
             "cover_letter": "I am very interested in this position."
         }, follow_redirects=True)
@@ -187,7 +205,8 @@ class ApplicationTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.get_data(as_text=True)
         
-        self.assertIn("Bạn đã ứng tuyển vào vị trí này rồi", data)
+        # Check for message in the data-message attribute of the flash-data div
+        self.assertIn('data-message="Bạn đã ứng tuyển vào vị trí này bằng CV này rồi."', data)
         
         with self.app.app_context():
             app_count = Application.query.count()

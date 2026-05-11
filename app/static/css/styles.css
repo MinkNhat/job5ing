@@ -500,7 +500,7 @@ input.form-control {
     width: 100%;
     background: rgba(255, 255, 255, 0.5);
     transform-origin: left;
-    animation: toast-progress 2s linear forwards;
+    animation: toast-progress 4s linear forwards;
 }
 
 @keyframes toast-in {

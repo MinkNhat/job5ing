@@ -1,6 +1,7 @@
 from flask import session
 from sqlalchemy import and_
 import cloudinary.uploader
+from datetime import datetime
 from app import db
 from app.models import User, Recruiter, Post, Application, Company, Location, CompanyScale
 def get_current_recruiter():
@@ -110,5 +111,14 @@ def update_company_info(company_id, recruiter_id, data, logo_file=None):
         company.scale_id = data["scale_id"]
     if "description" in data and data["description"]:
         company.description = data["description"]
+    if "tax_code" in data:
+        company.tax_code = data["tax_code"]
+    if "business_license" in data:
+        company.business_license = data["business_license"]
+    if "establish_date" in data and data["establish_date"]:
+        try:
+            company.establish_date = datetime.strptime(data["establish_date"], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
     db.session.commit()
     return company

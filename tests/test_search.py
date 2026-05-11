@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta
 from app import create_app, db
-from app.models import User, Company, Recruiter, Post
+from app.models import User, Company, Recruiter, Post, SalaryOption, ExperienceOption
 
 class SearchTestCase(unittest.TestCase):
     def setUp(self):
@@ -33,6 +33,19 @@ class SearchTestCase(unittest.TestCase):
             os.unlink(self.db_path)
 
     def seed_data(self):
+        # 0. Seed options (required for filtering/sorting)
+        s1 = SalaryOption(name="5-10 triệu")
+        s2 = SalaryOption(name="10-30 triệu")
+        s3 = SalaryOption(name="Trên 30 triệu")
+        db.session.add_all([s1, s2, s3])
+        db.session.flush()
+
+        e1 = ExperienceOption(name="Không yêu cầu kinh nghiệm")
+        e2 = ExperienceOption(name="1-3 năm")
+        e3 = ExperienceOption(name="Trên 5 năm")
+        db.session.add_all([e1, e2, e3])
+        db.session.flush()
+
         # 1. Create Companies
         c1 = Company(name="Google VN", location="Hồ Chí Minh", business_license="1", tax_code="T1")
         c2 = Company(name="FPT Software", location="Hà Nội", business_license="2", tax_code="T2")
@@ -55,8 +68,8 @@ class SearchTestCase(unittest.TestCase):
         p1 = Post(
             recruiter_id=u1.id,
             title="Python Developer",
-            salary_id=2, # Medium salary
-            experience_id=2,
+            salary_id=s2.id,
+            experience_id=e2.id,
             status="PINNED",
             created_at=datetime.utcnow() - timedelta(days=2)
         )
@@ -64,8 +77,8 @@ class SearchTestCase(unittest.TestCase):
         p2 = Post(
             recruiter_id=u2.id,
             title="Java Backend",
-            salary_id=1, # Lowest salary
-            experience_id=1,
+            salary_id=s1.id,
+            experience_id=e1.id,
             status="ACTIVE",
             created_at=datetime.utcnow() - timedelta(days=1)
         )
@@ -73,8 +86,8 @@ class SearchTestCase(unittest.TestCase):
         p3 = Post(
             recruiter_id=u1.id,
             title="Frontend Lead",
-            salary_id=3, # Highest salary
-            experience_id=3,
+            salary_id=s3.id,
+            experience_id=e3.id,
             status="ACTIVE",
             created_at=datetime.utcnow()
         )
@@ -93,47 +106,58 @@ class SearchTestCase(unittest.TestCase):
         """Tìm kiếm theo keyword tên công ty"""
         response = self.client.get("/?keyword=FPT")
         data = response.get_data(as_text=True)
-        self.assertIn("Java Backend", data)
-        self.assertNotIn("Python Developer", data)
-
-    def test_filter_by_location(self):
-        """Lọc theo địa điểm (HCM)"""
-        # Note: Assumes city_id 1 is HCM. test_search seed doesn't set Location rows.
-        # This will fail unless Location rows are seeded. We will pass location_id=c1.city_id
-        pass
+        # We only check the main jobs section for the absence of Google
+        jobs_section = data[data.find('id="jobs"'):]
+        self.assertIn("Java Backend", jobs_section)
+        self.assertNotIn("Python Developer", jobs_section)
 
     def test_filter_by_experience(self):
         """Lọc theo kinh nghiệm (Exact match)"""
-        response = self.client.get("/?experience=2")
+        # Experience 2 = 1-3 năm (Python Developer)
+        with self.app.app_context():
+            e2 = ExperienceOption.query.filter_by(name="1-3 năm").first()
+            e2_id = e2.id
+        response = self.client.get(f"/?experience={e2_id}")
         data = response.get_data(as_text=True)
-        self.assertIn("Python Developer", data)
-        self.assertNotIn("Frontend Lead", data)
+        jobs_section = data[data.find('id="jobs"'):]
+        self.assertIn("Python Developer", jobs_section)
+        self.assertNotIn("Frontend Lead", jobs_section)
 
     def test_filter_by_salary(self):
         """Lọc theo mức lương (Exact match)"""
-        response = self.client.get("/?salary=3")
+        # Salary 3 = Trên 30 triệu (Frontend Lead)
+        with self.app.app_context():
+            s3 = SalaryOption.query.filter_by(name="Trên 30 triệu").first()
+            s3_id = s3.id
+        response = self.client.get(f"/?salary={s3_id}")
         data = response.get_data(as_text=True)
-        self.assertIn("Frontend Lead", data)
-        self.assertNotIn("Python Developer", data)
+        jobs_section = data[data.find('id="jobs"'):]
+        self.assertIn("Frontend Lead", jobs_section)
+        self.assertNotIn("Python Developer", jobs_section)
 
     def test_sorting_by_newest(self):
         """Sắp xếp theo bài đăng mới nhất"""
         response = self.client.get("/?sort_by=newest")
         data = response.get_data(as_text=True)
-        # Kiểm tra thứ tự xuất hiện trong HTML (Frontend Lead mới nhất)
-        lead_pos = data.find("Frontend Lead")
-        java_pos = data.find("Java Backend")
-        python_pos = data.find("Python Developer")
+        jobs_section = data[data.find('id="jobs"'):]
+        
+        lead_pos = jobs_section.find("Frontend Lead")
+        java_pos = jobs_section.find("Java Backend")
+        python_pos = jobs_section.find("Python Developer")
+        
+        # Newest first: Frontend Lead (now) > Java (1 day ago) > Python (2 days ago)
         self.assertTrue(lead_pos < java_pos < python_pos)
 
     def test_sorting_by_salary_rank(self):
         """Sắp xếp theo rank lương (Trên 30 triệu > 10-30 triệu > 5-10 triệu)"""
         response = self.client.get("/?sort_by=salary_desc")
         data = response.get_data(as_text=True)
+        jobs_section = data[data.find('id="jobs"'):]
         
-        lead_pos = data.find("Frontend Lead")     # Trên 30tr
-        python_pos = data.find("Python Developer") # 10-30tr
-        java_pos = data.find("Java Backend")      # 5-10tr
+        # Salary desc: Frontend (30+) > Python (10-30) > Java (5-10)
+        lead_pos = jobs_section.find("Frontend Lead")
+        python_pos = jobs_section.find("Python Developer")
+        java_pos = jobs_section.find("Java Backend")
         
         self.assertTrue(lead_pos < python_pos < java_pos)
 
@@ -141,10 +165,13 @@ class SearchTestCase(unittest.TestCase):
         """Sắp xếp mặc định: PINNED lên đầu, sau đó mới đến thời gian"""
         response = self.client.get("/")
         data = response.get_data(as_text=True)
+        # Here Python is PINNED so it appears in VIP, but in main list it depends on query
+        # Actually default sort in main list also puts PINNED first
+        jobs_section = data[data.find('id="jobs"'):]
         
-        python_pos = data.find("Python Developer") # PINNED (mặc dù cũ hơn bài Java)
-        lead_pos = data.find("Frontend Lead")     # ACTIVE - Newest
-        java_pos = data.find("Java Backend")      # ACTIVE
+        python_pos = jobs_section.find("Python Developer") 
+        lead_pos = jobs_section.find("Frontend Lead")     
+        java_pos = jobs_section.find("Java Backend")      
         
         self.assertTrue(python_pos < lead_pos < java_pos)
 

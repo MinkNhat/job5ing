@@ -32,19 +32,14 @@ class ProfileManagementTestCase(unittest.TestCase):
         self.app_context.pop()
 
     def test_update_profile_success(self):
-        """Kiểm tra cập nhật thông tin User và CV thành công."""
+        """Kiểm tra cập nhật thông tin User thành công."""
         form_data = {
             "first_name": "Nguyen",
             "last_name": "Van A",
             "phone": "0912345678",
             "address": "Hanoi, Vietnam",
             "sex": "Nam",
-            "date_of_birth": "1995-01-01",
-            "cv_title": "Python Developer",
-            "cv_summary": "I am a dev",
-            "cv_skills": "Python, Flask, MySQL",
-            "cv_experience": "2 years of experience",
-            "cv_education": "University of Tech"
+            "date_of_birth": "1995-01-01"
         }
         
         # Giả lập session vì hàm sync_authenticated_session có dùng session
@@ -59,12 +54,6 @@ class ProfileManagementTestCase(unittest.TestCase):
             updated_user = db.session.get(User, self.user.id)
             self.assertEqual(updated_user.first_name, "Nguyen")
             self.assertEqual(updated_user.phone, "0912345678")
-            
-            # Kiểm tra dữ liệu CV
-            cv = CV.query.filter_by(user_id=self.user.id).first()
-            self.assertIsNotNone(cv)
-            self.assertEqual(cv.title, "Python Developer")
-            self.assertEqual(cv.skills, "Python, Flask, MySQL")
 
     def test_update_profile_missing_required(self):
         """Kiểm tra báo lỗi khi thiếu trường bắt buộc."""

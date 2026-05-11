@@ -83,20 +83,20 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Mã số thuế</label>
-                    <input type="text" class="form-control" value="{{ company.tax_code or '' }}" 
+                    <input type="text" name="tax_code" class="form-control" value="{{ company.tax_code or '' }}" 
                             placeholder="Nhập mã số thuế" {% if not recruiter.is_company_admin %}disabled{% endif %}>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label">Ngày thành lập</label>
-                    <input type="date" class="form-control" 
+                    <input type="date" name="establish_date" class="form-control" 
                             value="{% if company.establish_date %}{{ company.establish_date.strftime('%Y-%m-%d') }}{% endif %}" 
                             {% if not recruiter.is_company_admin %}disabled{% endif %}>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label">Giấy phép kinh doanh</label>
-                    <input type="text" class="form-control" value="{{ company.business_license or '' }}" 
+                    <input type="text" name="business_license" class="form-control" value="{{ company.business_license or '' }}" 
                             placeholder="Nhập số giấy phép kinh doanh" {% if not recruiter.is_company_admin %}disabled{% endif %}>
                 </div>
             </div>

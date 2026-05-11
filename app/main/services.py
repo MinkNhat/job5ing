@@ -664,11 +664,10 @@ def extract_indexed_items(form_data, prefix, fields_config, primary_field):
                 item[field_name] = value or None
             else:
                 item[field_name] = value or None
-        
+
         items.append(item)
         idx += 1
     return items
-
 
 def save_resume(user, form_data):
     try:

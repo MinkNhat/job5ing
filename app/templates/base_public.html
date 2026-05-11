@@ -59,10 +59,10 @@
             const closeBtn = toast.querySelector('.toast-close');
             closeBtn.onclick = () => removeToast(toast);
 
-            // Tự động xóa sau 2 giây
+            // Tự động xóa sau 4 giây
             setTimeout(() => {
                 if (toast.parentElement) removeToast(toast);
-            }, 2000);
+            }, 4000);
         }
 
         function removeToast(toast) {

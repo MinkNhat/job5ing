@@ -224,6 +224,9 @@ def company():
                 "website": request.form.get("website"),
                 "scale_id": request.form.get("scale_id", type=int),
                 "description": request.form.get("description"),
+                "tax_code": request.form.get("tax_code"),
+                "establish_date": request.form.get("establish_date"),
+                "business_license": request.form.get("business_license"),
             }
             update_company_info(company.id, recruiter.user_id, data, logo_file)
             flash("Cập nhật thông tin công ty thành công.", "success")

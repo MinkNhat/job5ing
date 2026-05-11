@@ -533,7 +533,10 @@ def view_candidate_cv(application_id):
         return redirect(url_for("main.login"))
 
     application = Application.query.get_or_404(application_id)
-    if application.post.recruiter_id != user.id:
+    current_recruiter = Recruiter.query.filter_by(user_id=user.id).first()
+    post_recruiter = Recruiter.query.filter_by(user_id=application.post.recruiter_id).first()
+    
+    if not current_recruiter or not post_recruiter or current_recruiter.company_id != post_recruiter.company_id:
         flash("Bạn không có quyền xem hồ sơ này.", "danger")
         return redirect(url_for("main.index"))
 
