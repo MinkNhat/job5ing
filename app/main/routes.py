@@ -597,8 +597,23 @@ def resume():
             flash("Nhà tuyển dụng không thể tạo hoặc cập nhật CV mới.", "warning")
             return redirect(url_for("main.resume_management"))
         success, message = save_resume(user, request.form)
-        flash(message, "success" if success else "danger")
-        return redirect(url_for("main.resume_management"))
+        
+        if success:
+            flash(message, "success")
+            return redirect(url_for("main.resume_management"))
+        else:
+            flash(message, "danger")
+            if cv_id:
+                cv = CV.query.filter_by(id=cv_id, user_id=user.id).first_or_404()
+            else:
+                cv = get_user_cv(user)
+            
+            return render_template(
+                "candidate/resume.html", 
+                user=user, 
+                cv=cv, 
+                form_data=dict(request.form)
+            )
 
     if action == "create":
         if user.is_employer:
