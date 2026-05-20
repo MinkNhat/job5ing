@@ -2,12 +2,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
 from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 db = SQLAlchemy()
 migrate = Migrate()
 
 def create_app(test_config=None):
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
