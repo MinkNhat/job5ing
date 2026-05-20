@@ -58,7 +58,7 @@
                             id="title" 
                             name="title" 
                             class="form-control"
-                            value="{{ cv.title or '' }}"
+                            value="{{ form_data.get('title', '') if form_data else (cv.title or '') }}"
                         >
                     </div>
 
@@ -70,7 +70,7 @@
                             class="form-control form-textarea"
                             rows="3"
                             placeholder="Mô tả ngắn gọn về bạn, kinh nghiệm và tài năng..."
-                        >{{ cv.summary or '' }}</textarea>
+                        >{{ form_data.get('summary', '') if form_data else (cv.summary or '') }}</textarea>
                     </div>
 
                     <div class="cv-field">
@@ -79,9 +79,9 @@
                             id="skills" 
                             name="skills" 
                             class="form-control form-textarea"
-                            placeholder="VD: Python, JavaScript, React, SQL, Django..."
+                            placeholder="Liệt kê các kỹ năng của bạn..."
                             rows="3"
-                        >{{ cv.skills if cv.skills else '' }}</textarea>
+                        >{{ form_data.get('skills', '') if form_data else (cv.skills if cv.skills else '') }}</textarea>
                     </div>
 
                     <div class="cv-field">
@@ -107,6 +107,15 @@
                     <input type="hidden" name="action" value="{{ request.args.get('action') or '' }}">
                     <input type="hidden" name="cv_id" value="{{ cv.id or '' }}">
                     <input type="hidden" id="cv_url" name="cv_url" value="{{ cv.cv_url or '' }}">
+                    
+                    <!-- Render hidden inputs if validation error -->
+                    {% if form_data %}
+                        {% for key, value in form_data.items() %}
+                            {% if key.startswith('education_') or key.startswith('exp_') %}
+                                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
 
                     <div class="button-group">
                         <button type="submit" class="btn btn-submit">

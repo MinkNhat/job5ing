@@ -28,7 +28,12 @@ const itemConfig = {
             </div>
         `,
         title: 'thông tin học tập',
-        validation: (data) => data.school?.trim() ? null : 'Vui lòng nhập tên trường/đại học'
+        validation: (data) => {
+            if (!data.school?.trim()) return 'Vui lòng nhập tên trường/đại học';
+            if (!data.major?.trim()) return 'Vui lòng nhập ngành học';
+            if (!data.start_date?.trim()) return 'Vui lòng chọn ngày bắt đầu';
+            return null;
+        }
     },
     experience: {
         containerId: 'experience-container',
@@ -64,7 +69,13 @@ const itemConfig = {
             </div>
         `,
         title: 'thông tin kinh nghiệm',
-        validation: (data) => data.job_title?.trim() ? null : 'Vui lòng nhập tên công việc',
+        validation: (data) => {
+            if (!data.job_title?.trim()) return 'Vui lòng nhập tên công việc';
+            if (!data.company_name?.trim()) return 'Vui lòng nhập tên công ty';
+            if (!data.position?.trim()) return 'Vui lòng nhập cấp bậc/chức vụ';
+            if (!data.start_date?.trim()) return 'Vui lòng chọn ngày bắt đầu';
+            return null;
+        },
         modalSize: 'modal-lg'
     }
 };
@@ -105,31 +116,80 @@ function initializeDynamicSections() {
 }
 
 function populateExistingData() {
-    if (typeof existingCVData === 'undefined') return;
+    const hasFormData = restoreFromFormHiddenInputs();
     
-    if (existingCVData.education?.length) {
-        existingCVData.education.forEach(edu => {
-            addItem('education', {
-                school: edu.school || '',
-                major: edu.major || '',
-                start_date: formatDateForInput(edu.start_date),
-                end_date: formatDateForInput(edu.end_date)
+    if (!hasFormData && typeof existingCVData !== 'undefined') {
+        if (existingCVData.education?.length) {
+            existingCVData.education.forEach(edu => {
+                addItem('education', {
+                    school: edu.school || '',
+                    major: edu.major || '',
+                    start_date: formatDateForInput(edu.start_date),
+                    end_date: formatDateForInput(edu.end_date)
+                });
             });
-        });
+        }
+        
+        if (existingCVData.experience?.length) {
+            existingCVData.experience.forEach(exp => {
+                addItem('experience', {
+                    job_title: exp.job_title || '',
+                    company_name: exp.company_name || '',
+                    position: exp.position || '',
+                    description: exp.description || '',
+                    start_date: formatDateForInput(exp.start_date),
+                    end_date: formatDateForInput(exp.end_date)
+                });
+            });
+        }
+    }
+}
+
+function restoreFromFormHiddenInputs() {
+    const educationInputs = document.querySelectorAll('input[name^="education_"]');
+    const experienceInputs = document.querySelectorAll('input[name^="exp_"]');
+    
+    if (educationInputs.length === 0 && experienceInputs.length === 0) {
+        return false;
     }
     
-    if (existingCVData.experience?.length) {
-        existingCVData.experience.forEach(exp => {
-            addItem('experience', {
-                job_title: exp.job_title || '',
-                company_name: exp.company_name || '',
-                position: exp.position || '',
-                description: exp.description || '',
-                start_date: formatDateForInput(exp.start_date),
-                end_date: formatDateForInput(exp.end_date)
-            });
-        });
-    }
+    // Extract education items
+    const educationIndices = new Set();
+    educationInputs.forEach(input => {
+        const match = input.name.match(/education_\w+_(\d+)/);
+        if (match) educationIndices.add(parseInt(match[1]));
+    });
+    
+    educationIndices.forEach(idx => {
+        const data = {
+            school: document.querySelector(`input[name="education_school_${idx}"]`)?.value || '',
+            major: document.querySelector(`input[name="education_major_${idx}"]`)?.value || '',
+            start_date: document.querySelector(`input[name="education_start_${idx}"]`)?.value || '',
+            end_date: document.querySelector(`input[name="education_end_${idx}"]`)?.value || ''
+        };
+        if (data.school) addItem('education', data);
+    });
+    
+    // Extract experience items
+    const experienceIndices = new Set();
+    experienceInputs.forEach(input => {
+        const match = input.name.match(/exp_\w+_(\d+)/);
+        if (match) experienceIndices.add(parseInt(match[1]));
+    });
+    
+    experienceIndices.forEach(idx => {
+        const data = {
+            job_title: document.querySelector(`input[name="exp_job_title_${idx}"]`)?.value || '',
+            company_name: document.querySelector(`input[name="exp_company_${idx}"]`)?.value || '',
+            position: document.querySelector(`input[name="exp_position_${idx}"]`)?.value || '',
+            description: document.querySelector(`textarea[name="exp_description_${idx}"]`)?.value || '',
+            start_date: document.querySelector(`input[name="exp_start_${idx}"]`)?.value || '',
+            end_date: document.querySelector(`input[name="exp_end_${idx}"]`)?.value || ''
+        };
+        if (data.job_title) addItem('experience', data);
+    });
+    
+    return educationIndices.size > 0 || experienceIndices.size > 0;
 }
 
 function addItem(type, data = {}) {

@@ -419,10 +419,11 @@ def parse_resume_gemini(text, file_obj=None):
         
         Lưu ý:
         - skills PHẢI là mảng (array) các kỹ năng riêng lẻ, mỗi skill là 2-3 từ
-        - experience và education PHẢI là mảng (array) các object có thông tin chi tiết
+        - experience và education PHẢI là mảng (array) các object có thông tin chi tiết, nếu không tìm thấy thông tin nào trong object đó thì trường đó để null hoặc bỏ qua
         - start_date, end_date format YYYY-MM (ví dụ: 2023-01) hoặc YYYY (ví dụ: 2023)
         - end_date có thể null nếu vẫn đang làm việc hoặc còn học
         - Các trường có thể null hoặc để trống nếu không tìm thấy
+        - Phân biệt rõ ràng giữa experience và projects cá nhân, không được gộp chung hoặc nhầm lẫn. Nếu không chắc chắn, hãy để trống
         - Trả về CHỈ JSON, không có text khác
         
         CV content:
@@ -669,6 +670,32 @@ def extract_indexed_items(form_data, prefix, fields_config, primary_field):
         idx += 1
     return items
 
+
+def validate_cv_education(education_items):
+    if not education_items:
+        return True, None
+    
+    for idx, item in enumerate(education_items):
+        if not item.get("school") or not item["school"].strip():
+            return False, f"Học vấn: Vui lòng nhập tên trường/đại học."
+    
+    return True, None
+
+
+def validate_cv_experience(experience_items):
+    if not experience_items:
+        return True, None
+    
+    for idx, item in enumerate(experience_items):
+        if not item.get("job_title") or not item["job_title"].strip():
+            return False, f"Kinh nghiệm: Vui lòng nhập tên công việc."
+        
+        if not item.get("company") or not item["company"].strip():
+            return False, f"Kinh nghiệm: Vui lòng nhập tên công ty."
+    
+    return True, None
+
+
 def save_resume(user, form_data):
     try:
         cv_id = form_data.get("cv_id")
@@ -706,13 +733,31 @@ def save_resume(user, form_data):
                 skills_list.append(skill_name)
         
         # Handle education
-        CVEducation.query.filter_by(cv_id=cv.id).delete()
         education_items = extract_indexed_items(
             form_data,
             "education_",
             {"school": "text", "major": "optional", "start": "date", "end": "date"},
             "school"
         )
+        
+        # Handle experience
+        experience_items = extract_indexed_items(
+            form_data,
+            "exp_",
+            {"job_title": "text", "company": "optional", "position": "optional", "description": "optional", "start": "date", "end": "date"},
+            "job_title"
+        )
+        
+        # Validate
+        is_valid, error_message = validate_cv_education(education_items)
+        if not is_valid:
+            return False, error_message
+        
+        is_valid, error_message = validate_cv_experience(experience_items)
+        if not is_valid:
+            return False, error_message
+        
+        CVEducation.query.filter_by(cv_id=cv.id).delete()
         education_list = []
         for item in education_items:
             edu = CVEducation(
@@ -730,14 +775,7 @@ def save_resume(user, form_data):
                 "end_date": item["end"].isoformat() if item["end"] else None
             })
         
-        # Handle experience
         CVExperience.query.filter_by(cv_id=cv.id).delete()
-        experience_items = extract_indexed_items(
-            form_data,
-            "exp_",
-            {"job_title": "text", "company": "optional", "position": "optional", "description": "optional", "start": "date", "end": "date"},
-            "job_title"
-        )
         experience_list = []
         for item in experience_items:
             exp = CVExperience(
